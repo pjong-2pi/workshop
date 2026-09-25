@@ -15,6 +15,7 @@ $required = @(
     '.codex/agents/master-inspector.toml'
     'evals/workshop-foreman.md'
     'scripts/check-environment.ps1'
+    'scripts/setup.ps1'
 )
 
 $missing = $required | Where-Object {
@@ -99,14 +100,27 @@ if ($merge -match '(?i)prefer(?:s|red)?\s+squash|squash preference') {
     throw 'github-merge-pr must not impose a squash preference.'
 }
 
-$setup = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
-foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'herdr --version', 'HERDR_ENV')) {
-    Assert-Contains $setup $expected 'workshop-setup environment check'
+$environmentCheck = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
+foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', 'HERDR_ENV')) {
+    Assert-Contains $environmentCheck $expected 'Workshop environment check'
 }
-Assert-Contains $setup "Write-Host 'Herdr environment: active" 'workshop-setup active Herdr state'
-Assert-Contains $setup "Write-Host 'Herdr environment: inactive" 'workshop-setup informational Herdr state'
-if ($setup -match '\$problems\.Add\([^\r\n]*HERDR_ENV') {
+Assert-Contains $environmentCheck "Write-Host 'Herdr environment: active" 'Workshop active Herdr state'
+Assert-Contains $environmentCheck "Write-Host 'Herdr environment: inactive" 'Workshop informational Herdr state'
+if ($environmentCheck -match '\$problems\.Add\([^\r\n]*HERDR_ENV') {
     throw 'workshop-setup must not require HERDR_ENV for readiness.'
+}
+
+$setupSkill = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-setup/SKILL.md') -Raw
+foreach ($expected in @('initial bootstrap', 'normal Foreman operations', 'routine development', 'every new Codex session', 'routine environment checking', 'merely because Workshop is in use', '.local/setup-complete', 'scripts/setup.ps1', 'explicit authorization')) {
+    Assert-Contains $setupSkill $expected 'workshop-setup lifecycle'
+}
+
+$setupScript = Get-Content -LiteralPath (Join-Path $root 'scripts/setup.ps1') -Raw
+foreach ($expected in @("Join-Path `$root 'projects'", "Join-Path `$root '.local'", "Join-Path `$local 'setup-complete'", 'check-environment.ps1', 'InstallCodexIntegration', 'herdr integration install codex', 'New-Item -ItemType Directory', 'New-Item -ItemType File')) {
+    Assert-Contains $setupScript $expected 'workshop-setup mechanics'
+}
+if ($setupScript -match 'SetEnvironmentVariable') {
+    throw 'workshop-setup must not invent persistent environment variables.'
 }
 
 $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md') -Raw

@@ -5,11 +5,15 @@ Write-Host "OS: $([System.Runtime.InteropServices.RuntimeInformation]::OSDescrip
 Write-Host "Shell: PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
 
 $commands = @{}
-foreach ($name in @('git', 'gh', 'codex', 'herdr')) {
+foreach ($name in @('git', 'gh', 'codex', 'herdr', 'pwsh')) {
     $commands[$name] = Get-Command $name -ErrorAction SilentlyContinue
     if (-not $commands[$name]) {
         $problems.Add("Missing required command: $name")
     }
+}
+
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $problems.Add('PowerShell 7 or later is required.')
 }
 
 if ($commands.git) {
@@ -36,10 +40,14 @@ if ($commands.gh) {
 if ($commands.codex) {
     codex --version
     if ($LASTEXITCODE -ne 0) { $problems.Add('Codex could not report its version.') }
+    codex login status
+    if ($LASTEXITCODE -ne 0) { $problems.Add('Codex is not authenticated.') }
 }
 if ($commands.herdr) {
     herdr --version
     if ($LASTEXITCODE -ne 0) { $problems.Add('Herdr could not report its version.') }
+    herdr config check
+    if ($LASTEXITCODE -ne 0) { $problems.Add('Herdr configuration is invalid.') }
 }
 
 if ($env:HERDR_ENV -eq '1') {
