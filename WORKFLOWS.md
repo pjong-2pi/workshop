@@ -9,7 +9,8 @@ remain the detailed record; this file captures only reusable patterns.
 | Create a GitHub PR | 1 | Verify scope, checks, branch, commit, and explicit base/head. | `github-create-pr` created. |
 | Check a GitHub PR | 1 | Bind findings and checks to the exact PR and head SHA. | `github-check-pr` created. |
 | Merge a GitHub PR | 1 | Require explicit approval and fresh checks; never bypass protections. | `github-merge-pr` created. |
-| Commit from a fresh clone | 1 | Missing Git author identity blocks commits late in the workflow. | Track for `workshop-setup`; environment check now fails early. |
+| Check Workshop readiness | 2 | Missing Git identity and GitHub authentication can block a workflow late. | Minimal reporting-only `workshop-setup` created. |
+| Run a Herdr worker lifecycle | 1 | Worktree, pane, agent readiness, prompt/wait, and safe cleanup use stable CLI mechanics. | Keep explicit in `workshop-foreman`; reconsider extraction only after repeated real runs. |
 | Run Foreman evaluations | 1 | Deterministic gate exists; disposable live Herdr runner is still missing. | Defer a runner skill until the harness exists. |
 
 Add or increment an entry when a workflow repeats or exposes new friction. Prefer

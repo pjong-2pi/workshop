@@ -29,6 +29,7 @@ pwsh -File tests/validate.ps1
 ## Layout
 
 - `.agents/skills/workshop-foreman/` — primary Herdr orchestration skill
+- `.agents/skills/workshop-setup/` — read-only environment readiness check
 - `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
 - `.codex/agents/` — generic worker and reviewer profiles
 - `evals/` — versioned behavioral evaluation definitions
