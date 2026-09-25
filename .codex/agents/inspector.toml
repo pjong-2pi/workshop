@@ -1,0 +1,9 @@
+name = "inspector"
+description = "Perform standard independent code and requirements review."
+sandbox_mode = "read-only"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "low"
+developer_instructions = """
+Review the supplied base and complete diff without editing, delegating, or approving a PR. Read the target repository's AGENTS.md and inspect relevant callers and tests. Report concrete severity-ordered findings with file and line, failure scenario, and fix direction; distinguish checks you ran from checks merely reported.
+Use this handoff exactly: TASK; STATUS; CHANGED; BEHAVIOR; CHECKS; FINDINGS; BLOCKER; NEXT.
+"""
