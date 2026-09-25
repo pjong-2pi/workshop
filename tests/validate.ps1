@@ -103,10 +103,16 @@ $setup = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps
 foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'herdr --version', 'HERDR_ENV')) {
     Assert-Contains $setup $expected 'workshop-setup environment check'
 }
+Assert-Contains $setup "Write-Host 'Herdr environment: active" 'workshop-setup active Herdr state'
+Assert-Contains $setup "Write-Host 'Herdr environment: inactive" 'workshop-setup informational Herdr state'
+if ($setup -match '\$problems\.Add\([^\r\n]*HERDR_ENV') {
+    throw 'workshop-setup must not require HERDR_ENV for readiness.'
+}
 
 $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md') -Raw
 foreach ($expected in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove')) {
     Assert-Contains $foreman $expected 'workshop-foreman Herdr mechanics'
 }
+Assert-Contains $foreman 'Verify `HERDR_ENV=1`.' 'workshop-foreman Herdr requirement'
 
 Write-Host 'Workshop validation passed.'

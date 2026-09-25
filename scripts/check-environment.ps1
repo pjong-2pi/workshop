@@ -43,9 +43,9 @@ if ($commands.herdr) {
 }
 
 if ($env:HERDR_ENV -eq '1') {
-    Write-Host 'Herdr environment: compatible (HERDR_ENV=1)'
+    Write-Host 'Herdr environment: active (HERDR_ENV=1)'
 } else {
-    $problems.Add('Run Workshop from a Herdr environment with HERDR_ENV=1.')
+    Write-Host 'Herdr environment: inactive (Foreman orchestration requires HERDR_ENV=1)'
 }
 
 if ($problems.Count -gt 0) {
