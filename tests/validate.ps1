@@ -13,7 +13,7 @@ $required = @(
     '.codex/agents/master-craftsman.toml',
     '.codex/agents/inspector.toml',
     '.codex/agents/master-inspector.toml',
-    'scripts/check-environment.ps1', 'scripts/setup.ps1', 'tests/run.ps1',
+    'scripts/check-environment.ps1', 'scripts/setup.ps1', 'scripts/jev-routing.ps1', 'tests/run.ps1', 'tests/jev-routing.ps1',
     'evals/workshop-foreman.md', 'evals/skill-evals.json'
 )
 $missing = $required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) }
@@ -38,7 +38,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -95,6 +95,31 @@ $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-fo
 foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove', 'Verify `HERDR_ENV=1`.')) {
     Assert-CommandContract $foreman $command 'workshop-foreman'
 }
+foreach ($id in @('jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')) {
+    $routing = ($definitions.evaluations | Where-Object id -eq $id).routing
+    if ($null -eq $routing -or @($routing.PSObject.Properties.Name | Sort-Object) -join ',' -ne 'agent,delegate,model,skill') { throw "Skill eval '$id' must define exactly the routing fields." }
+    if ($id -eq 'jev-fallback') {
+        if ($null -ne $routing.skill -or $null -ne $routing.agent -or $null -ne $routing.model -or $null -ne $routing.delegate) { throw "Skill eval '$id' must leave unavailable routing fields null." }
+    } elseif ($routing.skill -isnot [string] -or $routing.agent -isnot [string] -or $routing.model -isnot [string] -or $routing.delegate -isnot [bool]) {
+        throw "Skill eval '$id' has incomplete routing expectations."
+    }
+}
+foreach ($contract in @('Get-WorkshopJevDecision', 'scripts/jev-routing.ps1', 'JEV is advisory only', 'authoritative for intake')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman'
+}
+foreach ($contract in @('The selected profile supplies', 'role/developer instructions, sandbox, and reasoning effort.', 'its model overrides only that profile''s default model', 'in the `herdr agent start', '--model` argument for that invocation;', 'fallback or no accepted route uses the', 'current profile default.')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman'
+}
+$jev = Get-Content -LiteralPath (Join-Path $root 'scripts/jev-routing.ps1') -Raw
+foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'foreman-fallback', 'jev-routing.jsonl')) {
+    Assert-CommandContract $jev $contract 'jev-routing'
+}
+foreach ($contract in @("`$agents = @('master-craftsman', 'inspector', 'master-inspector')", "`$models = @('gpt-5.6-luna', 'gpt-5.6-terra')", 'independently of the selected agent role')) {
+    Assert-CommandContract $jev $contract 'jev-routing'
+}
+if ($jev -match '\$profiles\[\$answers\.agent\.choice\]\s*-ne\s*\$answers\.model\.choice') { throw 'JEV agent and model choices must remain independent.' }
+$substantiveRouting = ($definitions.evaluations | Where-Object id -eq 'jev-substantive-task').routing
+if ($substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover the Master Craftsman/Luna override.' }
 $cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
 if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
 

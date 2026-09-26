@@ -10,6 +10,26 @@ or investigation to a `master-craftsman`; one worker is enough unless scopes are
 genuinely independent. Do not add a management layer or delegation chain. Handle
 only incidental, obvious edits directly.
 
+## Advisory JEV routing
+
+For every task, map the request without copying its text into this exact
+single-line routing context grammar:
+`intent=<setup|bench-cleanup|pr-create|pr-check|pr-merge|implementation|investigation|review|other>;scope=<workshop|managed-repo|pr|workspace|local>;risk=<routine|architecture|concurrency|security|data-loss|authority>;effort=<trivial|substantive>`.
+It contains only allowlisted tags: never include credentials, secrets,
+private/customer data, code or file contents, or authorization material. Import
+`scripts/jev-routing.ps1` and call
+`Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot`.
+JEV is advisory only:
+use its minimal `skill`, `agent`, `model`, and `delegate` decision only when its
+source is `jev`; otherwise use existing Foreman judgment. Foreman remains
+authoritative for intake, user interaction, authorization, Herdr/worktrees,
+verification, review, escalation, and cleanup. Never let a JEV decision bypass
+these rules or select anything outside the existing skills and profiles.
+
+The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
+bounded API call and confidence/allowlist validation, and records an ignored local
+telemetry row. Do not run it in deterministic tests with network credentials.
+
 ## Select and prepare the target
 
 Resolve the exact target repository from the request or ask when ambiguity risks
@@ -50,10 +70,13 @@ herdr agent get $Agent
 A workspace without a ready agent is not a dispatched worker.
 
 Prefer an applicable target-project profile from `.codex/agents/`; otherwise use
-Workshop's generic profile for the selected role. Map its model, sandbox, and
-reasoning effort into `herdr agent start`. Put its developer instructions in the
-worker prompt verbatim; they are prompt content, not CLI arguments. Never assume
-Herdr loads Codex profile files itself.
+Workshop's generic profile for the selected role. The selected profile supplies
+role/developer instructions, sandbox, and reasoning effort. When JEV is accepted,
+its model overrides only that profile's default model in the `herdr agent start
+--model` argument for that invocation; fallback or no accepted route uses the
+current profile default. Put its developer instructions in the worker prompt
+verbatim; they are prompt content, not CLI arguments. Never assume Herdr loads
+Codex profile files itself. Foreman remains authoritative.
 
 Prompt with only the outcome, owned scope, dependencies, checks, non-goals, and
 authorization boundary. Point to repository paths instead of copying file contents

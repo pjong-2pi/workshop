@@ -41,6 +41,13 @@ pwsh -NoProfile -File tests/run.ps1
 `tests/validate.ps1` remains the fast static check used by the suite and when
 editing repository structure or eval definitions.
 
+Foreman consults JEV as a confidence-gated advisory route for every task. It uses
+the fixed TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, then falls
+back to Foreman judgment on any unavailable, malformed, low-confidence, or
+disallowed result. Ignored `.local/jev-routing.jsonl` records observed routing,
+JEV token usage, and latency; downstream task tokens, latency, and cost remain
+null until a live harness observes them.
+
 ## Evaluation model
 
 Workshop uses three layers: deterministic disposable-fixture tests; behavioral

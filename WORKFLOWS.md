@@ -13,6 +13,7 @@ remain the detailed record; this file captures only reusable patterns.
 | Run a Herdr worker lifecycle | 1 | Worktree, pane, agent readiness, prompt/wait, and safe cleanup use stable CLI mechanics. | Keep explicit in `workshop-foreman`; reconsider extraction only after repeated real runs. |
 | Clear a completed Herdr bench | 2 | Removal requires an exact recorded ID, clean worktree, completion evidence, immediate authorization, and post-removal verification. | `workshop-clear-bench` created; inconsistent state stops for manual investigation. |
 | Run Workshop evaluations | 2 | Setup behavior needs disposable fixtures; skill behavior needs harness traces and grading distinct from static checks. | Keep `tests/run.ps1` and versioned definitions; defer a runner skill and full Foreman execution until a real isolated harness exists. |
+| Advise Foreman routing with JEV | 1 | A structured, confidence-gated recommendation must remain inside existing skills/profiles and never own lifecycle or authority. | Keep the small PowerShell helper within Foreman; revisit only after local telemetry compares routes. |
 
 Add or increment an entry when a workflow repeats or exposes new friction. Prefer
 extending an existing skill when the trigger and authorization boundary are the
