@@ -11,6 +11,7 @@ remain the detailed record; this file captures only reusable patterns.
 | Merge a GitHub PR | 1 | Require explicit approval and fresh checks; never bypass protections. | `github-merge-pr` created. |
 | Bootstrap Workshop | 3 | First-time setup needs safe local structure, prerequisite checks, explicit user-config boundaries, and durable local initialization state. | `workshop-setup` owns idempotent bootstrap; routine checks stay in `check-environment.ps1`. |
 | Run a Herdr worker lifecycle | 1 | Worktree, pane, agent readiness, prompt/wait, and safe cleanup use stable CLI mechanics. | Keep explicit in `workshop-foreman`; reconsider extraction only after repeated real runs. |
+| Clear a completed Herdr bench | 2 | Removal requires an exact recorded ID, clean worktree, completion evidence, immediate authorization, and post-removal verification. | `workspace-clear-bench` created; inconsistent state stops for manual investigation. |
 | Run Workshop evaluations | 2 | Setup behavior needs disposable fixtures; skill behavior needs harness traces and grading distinct from static checks. | Keep `tests/run.ps1` and versioned definitions; defer a runner skill and full Foreman execution until a real isolated harness exists. |
 
 Add or increment an entry when a workflow repeats or exposes new friction. Prefer

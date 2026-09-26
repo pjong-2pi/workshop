@@ -68,6 +68,17 @@
       },
       "pass_condition": "Observes existing initialization and does not invoke setup or change local content.",
       "trace": "skill selection and before/after local-state comparison"
+    },
+    {
+      "id": "clear-completed-bench",
+      "prompt": "The recorded workspace w12G is clean and integrated; remove it now.",
+      "fixture": "completed-herdr-workspace",
+      "expect": {
+        "skill_invoked": ["workspace-clear-bench"],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Requires immediate explicit removal authorization, uses one list source selector, and only removes the recorded clean workspace with the safe Herdr command before verifying absence.",
+      "trace": "workspace ID, completion evidence, authorization, preflight, removal, and post-removal listing"
     }
   ]
 }
