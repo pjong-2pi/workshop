@@ -9,10 +9,13 @@ $required = @(
     '.agents/skills/github-create-pr/SKILL.md'
     '.agents/skills/github-check-pr/SKILL.md'
     '.agents/skills/github-merge-pr/SKILL.md'
+    '.agents/skills/workshop-setup/SKILL.md'
     '.codex/agents/master-craftsman.toml'
     '.codex/agents/inspector.toml'
     '.codex/agents/master-inspector.toml'
     'evals/workshop-foreman.md'
+    'scripts/check-environment.ps1'
+    'scripts/setup.ps1'
 )
 
 $missing = $required | Where-Object {
@@ -27,6 +30,7 @@ $skills = @(
     'github-create-pr'
     'github-check-pr'
     'github-merge-pr'
+    'workshop-setup'
 )
 foreach ($name in $skills) {
     $path = Join-Path $root ".agents/skills/$name/SKILL.md"
@@ -50,5 +54,75 @@ foreach ($profile in $genericFiles[1..3]) {
         }
     }
 }
+
+function Assert-Contains {
+    param(
+        [string] $Content,
+        [string] $Expected,
+        [string] $Contract
+    )
+
+    if (-not $Content.Contains($Expected)) {
+        throw "$Contract is missing: $Expected"
+    }
+}
+
+$create = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-create-pr/SKILL.md') -Raw
+Assert-Contains $create 'gh pr create --repo "$REPO" --base "$BASE" --head "$BRANCH"' 'github-create-pr contract'
+Assert-Contains $create 'gh pr view "$BRANCH" --repo "$REPO" --json' 'github-create-pr verification'
+Assert-Contains $create 'headRefOid' 'github-create-pr SHA verification'
+Assert-Contains $create 'test "$HEAD_SHA" = "$REMOTE_SHA"' 'github-create-pr pushed SHA binding'
+
+$check = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-check-pr/SKILL.md') -Raw
+Assert-Contains $check 'gh pr view "$PR" --repo "$REPO" --json' 'github-check-pr structured inspection'
+Assert-Contains $check 'gh pr diff "$PR" --repo "$REPO" --name-only' 'github-check-pr diff scope'
+Assert-Contains $check 'gh pr checks "$PR" --repo "$REPO" --required --json' 'github-check-pr required checks'
+Assert-Contains $check 'EXPECTED_SHA' 'github-check-pr SHA binding'
+
+$merge = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-merge-pr/SKILL.md') -Raw
+Assert-Contains $merge 'gh repo view "$REPO" --json' 'github-merge-pr repository policy inspection'
+Assert-Contains $merge 'Squash when neither specifies a method and the repository enables squash.' 'github-merge-pr default method'
+Assert-Contains $merge 'headRefOid' 'github-merge-pr SHA verification'
+Assert-Contains $merge 'Never add `--admin`, `--auto`, or `--delete-branch`' 'github-merge-pr prohibited behavior'
+
+$mergeCommands = @($merge -split "\r?\n" | Where-Object { $_.TrimStart().StartsWith('gh pr merge ') })
+if ($mergeCommands.Count -ne 3) {
+    throw "github-merge-pr must document exactly three explicit merge-method commands; found $($mergeCommands.Count)."
+}
+foreach ($command in $mergeCommands) {
+    Assert-Contains $command '--repo "$REPO"' 'github-merge-pr explicit repository'
+    Assert-Contains $command '--match-head-commit "$SHA"' 'github-merge-pr SHA guard'
+    if ($command -match '(?:^|\s)--(?:admin|auto|delete-branch)(?:\s|$)') {
+        throw "github-merge-pr executable command contains a prohibited bypass or cleanup flag: $command"
+    }
+}
+$environmentCheck = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
+foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', 'HERDR_ENV')) {
+    Assert-Contains $environmentCheck $expected 'Workshop environment check'
+}
+Assert-Contains $environmentCheck "Write-Host 'Herdr environment: active" 'Workshop active Herdr state'
+Assert-Contains $environmentCheck "Write-Host 'Herdr environment: inactive" 'Workshop informational Herdr state'
+if ($environmentCheck -match '\$problems\.Add\([^\r\n]*HERDR_ENV') {
+    throw 'workshop-setup must not require HERDR_ENV for readiness.'
+}
+
+$setupSkill = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-setup/SKILL.md') -Raw
+foreach ($expected in @('initial bootstrap', 'normal Foreman operations', 'routine development', 'every new Codex session', 'routine environment checking', 'merely because Workshop is in use', '.local/setup-complete', 'scripts/setup.ps1', 'explicit authorization')) {
+    Assert-Contains $setupSkill $expected 'workshop-setup lifecycle'
+}
+
+$setupScript = Get-Content -LiteralPath (Join-Path $root 'scripts/setup.ps1') -Raw
+foreach ($expected in @("Join-Path `$root 'projects'", "Join-Path `$root '.local'", "Join-Path `$local 'setup-complete'", 'check-environment.ps1', 'InstallCodexIntegration', 'herdr integration install codex', 'New-Item -ItemType Directory', 'New-Item -ItemType File')) {
+    Assert-Contains $setupScript $expected 'workshop-setup mechanics'
+}
+if ($setupScript -match 'SetEnvironmentVariable') {
+    throw 'workshop-setup must not invent persistent environment variables.'
+}
+
+$foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md') -Raw
+foreach ($expected in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove')) {
+    Assert-Contains $foreman $expected 'workshop-foreman Herdr mechanics'
+}
+Assert-Contains $foreman 'Verify `HERDR_ENV=1`.' 'workshop-foreman Herdr requirement'
 
 Write-Host 'Workshop validation passed.'

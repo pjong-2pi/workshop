@@ -1,18 +1,56 @@
 ---
 name: github-merge-pr
-description: Merge an exact GitHub pull request with the gh CLI after explicit user authorization and fresh verification of its head, reviews, checks, and mergeability. Use only when the user asks to merge; never infer approval.
+description: Merge an exact GitHub pull request with gh CLI only after explicit authorization and fresh SHA-bound verification of reviews, checks, policy, and mergeability. Use only when the user asks to merge; never infer approval.
 ---
 
 # GitHub Merge PR
 
-Require explicit authorization for the exact PR. Immediately before merging,
-verify the repository, PR number and URL, base, head, head SHA, state, review
-decision, checks, and mergeability with `gh pr view` and `gh pr checks`. Stop on an
-unexpected head change, failing or pending required check, blocking review,
-conflict, or ambiguous PR identity.
+Require explicit authorization for `REPO` (`HOST/OWNER/REPO`) and `PR` (number or
+URL). Freeze the freshly verified `headRefOid` as `SHA`. If the head changes, stop
+and repeat verification; never reuse evidence from the earlier head.
 
-Use a merge method allowed by the repository; prefer squash when no project rule
-or user instruction selects another method. Do not enable auto-merge, bypass branch
-protection, use administrator privileges, or delete the branch unless separately
-authorized. After the command, query the PR again and report the observed merged
-state and merge commit.
+## Re-verify immediately before merge
+
+```sh
+gh pr view "$PR" --repo "$REPO" --json number,url,state,isDraft,baseRefName,headRefName,headRefOid,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr checks "$PR" --repo "$REPO" --required --json name,state,bucket,workflow,link
+gh repo view "$REPO" --json nameWithOwner,mergeCommitAllowed,rebaseMergeAllowed,squashMergeAllowed,viewerPermission
+```
+
+Stop if the current `headRefOid` differs from `SHA`; the PR is not open and
+mergeable; it is a draft; a required check is pending or failed; review blocks the
+merge; repository policy is unclear; or permission is insufficient. Empty checks
+mean no configured checks, not a successful CI run.
+
+## Select the method
+
+Use this precedence:
+
+1. Target repository instructions or policy.
+2. Explicit user instruction.
+3. Squash when neither specifies a method and the repository enables squash.
+
+Stop if the selected method is not enabled or neither of the first two rules
+selects a method and squash is disabled.
+
+Run exactly one command matching that decision:
+
+```sh
+gh pr merge "$PR" --repo "$REPO" --match-head-commit "$SHA" --merge
+gh pr merge "$PR" --repo "$REPO" --match-head-commit "$SHA" --rebase
+gh pr merge "$PR" --repo "$REPO" --match-head-commit "$SHA" --squash
+```
+
+Never add `--admin`, `--auto`, or `--delete-branch`; never bypass protection,
+force-push, or infer authorization. Stop rather than entering a merge queue or
+enabling auto-merge in this MVP.
+
+## Verify the result
+
+```sh
+gh pr view "$PR" --repo "$REPO" --json number,url,state,headRefOid,mergedAt,mergedBy,mergeCommit
+```
+
+Success requires `state: MERGED`, a non-null `mergedAt` and `mergeCommit`, and the
+same `headRefOid` as `SHA`. Report the URL and merge commit; otherwise report the
+observed state without retrying another merge method.

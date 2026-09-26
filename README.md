@@ -10,14 +10,26 @@ supplies the orchestration workflow and generic worker profiles.
 ## Requirements
 
 - Git
+- GitHub CLI (`gh`)
 - Codex CLI
 - Herdr
 - PowerShell 7 for the current bootstrap and validation scripts
 
-Check the local toolchain:
+Bootstrap a new Workshop checkout:
 
 ```powershell
-pwsh -File scripts/check-environment.ps1
+pwsh -NoProfile -File scripts/setup.ps1
+```
+
+Setup creates the ignored `projects/` and `.local/` directories, validates the
+toolchain and authentication, checks Herdr configuration, reports Codex integration
+status, and records successful initialization in `.local/setup-complete`. It is
+safe to rerun intentionally, but is not part of routine Foreman operation.
+
+Run the lower-level environment diagnostic directly when needed:
+
+```powershell
+pwsh -NoProfile -File scripts/check-environment.ps1
 ```
 
 Validate the repository:
@@ -29,6 +41,7 @@ pwsh -File tests/validate.ps1
 ## Layout
 
 - `.agents/skills/workshop-foreman/` — primary Herdr orchestration skill
+- `.agents/skills/workshop-setup/` — explicit first-time local bootstrap
 - `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
 - `.codex/agents/` — generic worker and reviewer profiles
 - `evals/` — versioned behavioral evaluation definitions

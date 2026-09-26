@@ -22,24 +22,38 @@ configured default branch and exact checkout, verify that checkout is clean, and
 run `git pull --ff-only origin <default-branch>`. Preserve and report a missing,
 dirty, or divergent base; never stash, reset, or overwrite it.
 
-Verify `HERDR_ENV=1`. Use `herdr --help` and only the needed command-group help;
-installed CLI help is authoritative.
+Verify `HERDR_ENV=1`. Use the established commands below. Consult the installed
+CLI help only when a command is rejected or the installed version has drifted.
 
 ## Dispatch
 
 Create one dedicated Herdr workspace and Git worktree per worker from the refreshed
-base. Record the workspace, pane, branch, base, and path. When Herdr's normal path
-is not writable, use an explicit writable `--path` and exclude it with the target
-repository's `.git/info/exclude`, never a tracked ignore file.
+base, then record the returned workspace and pane identifiers:
 
-Start the worker's Codex session with `herdr agent start`, then verify it is
-interactive-ready with `herdr agent list` before prompting or waiting. A workspace
-without a ready agent is not a dispatched worker.
+```powershell
+herdr worktree create --workspace $Workspace --cwd $Repository --branch $Branch --base $Base --path $WorktreePath --label $Label --no-focus --trust-repository
+herdr worktree list --workspace $Workspace --cwd $Repository
+```
+
+When Herdr's normal path is not writable, use an explicit writable `--path` and
+exclude it with the target repository's `.git/info/exclude`, never a tracked
+ignore file.
+
+Start the worker's Codex session and verify it is interactive-ready before
+prompting:
+
+```powershell
+herdr agent start $Agent --kind codex --pane $Pane --timeout 300000 -- --model $Model --sandbox $Sandbox --config "model_reasoning_effort='$ReasoningEffort'"
+herdr agent get $Agent
+```
+
+A workspace without a ready agent is not a dispatched worker.
 
 Prefer an applicable target-project profile from `.codex/agents/`; otherwise use
-Workshop's generic profile for the selected role. Map its model, sandbox, reasoning
-effort, and developer instructions explicitly into `herdr agent start`; never
-assume Herdr loads Codex profile files itself.
+Workshop's generic profile for the selected role. Map its model, sandbox, and
+reasoning effort into `herdr agent start`. Put its developer instructions in the
+worker prompt verbatim; they are prompt content, not CLI arguments. Never assume
+Herdr loads Codex profile files itself.
 
 Prompt with only the outcome, owned scope, dependencies, checks, non-goals, and
 authorization boundary. Point to repository paths instead of copying file contents
@@ -50,7 +64,14 @@ CHECKS; FINDINGS; BLOCKER; NEXT**.
 
 For run-to-gate work, continue through the authorized lifecycle: dispatch, wait,
 verify evidence, review, fix findings, focused re-review, integrate, and advance.
-Wait through Herdr's agent commands instead of repeatedly polling healthy workers.
+Submit and wait through Herdr's agent commands instead of repeatedly polling
+healthy workers:
+
+```powershell
+herdr agent prompt $Agent $Prompt --wait --until idle --until done --until blocked --timeout 300000
+herdr agent read $Agent
+```
+
 Stop at a real blocker or before any unapproved push, PR, merge, or destructive
 operation.
 
@@ -65,6 +86,11 @@ re-review.
 
 Inspect the complete diff and rerun checks required by the target instructions or
 not adequately evidenced by workers. After integration, remove only recorded,
-clean worktrees that are integrated or explicitly approved for discard. Never
-force removal or delete a branch without approval. Report the reached gate or the
-concrete blocker; do not claim unobserved success.
+clean worktrees that are integrated or explicitly approved for discard:
+
+```powershell
+herdr worktree remove --workspace $Workspace --trust-repository
+```
+
+Never add `--force` or delete a branch without approval. Report the reached gate
+or the concrete blocker; do not claim unobserved success.
