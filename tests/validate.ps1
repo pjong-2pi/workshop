@@ -8,6 +8,8 @@ $required = @(
     '.agents/skills/github-check-pr/SKILL.md',
     '.agents/skills/github-merge-pr/SKILL.md',
     '.agents/skills/workshop-setup/SKILL.md',
+    '.agents/skills/workshop-clear-bench/SKILL.md',
+    '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1',
     '.codex/agents/master-craftsman.toml',
     '.codex/agents/inspector.toml',
     '.codex/agents/master-inspector.toml',
@@ -17,7 +19,7 @@ $required = @(
 $missing = $required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) }
 if ($missing) { throw "Missing required file(s): $($missing -join ', ')" }
 
-foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', 'github-merge-pr', 'workshop-setup')) {
+foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', 'github-merge-pr', 'workshop-setup', 'workshop-clear-bench')) {
     $content = Get-Content -LiteralPath (Join-Path $root ".agents/skills/$name/SKILL.md") -Raw
     if ($content -notmatch "(?s)^---\r?\nname: $name\r?\ndescription: .+?\r?\n---") {
         throw "$name has invalid or incomplete frontmatter."
@@ -36,7 +38,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -93,6 +95,16 @@ $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-fo
 foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove', 'Verify `HERDR_ENV=1`.')) {
     Assert-CommandContract $foreman $command 'workshop-foreman'
 }
+$cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
+if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
+
+$cleanup = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1') -Raw
+foreach ($contract in @('herdr workspace get $Workspace', "`$response.id -ne 'cli:workspace:get'", 'workspace_id -cne $Workspace', 'worktree.repo_root', 'herdr worktree list --cwd $Repository --trust-repository', 'ConvertFrom-Json -ErrorAction Stop', "`$response.id -ne 'cli:worktree:list'", '$response.result.type -ne', '$response.result.worktrees', 'open_workspace_id -ceq $Workspace', 'function Assert-CleanWorktree', 'git -C $Path status --porcelain', 'Assert-CleanWorktree $worktreePath', 'herdr worktree remove --workspace $Workspace --trust-repository', 'Provide exactly one of -IntegrationEvidence or -DiscardAuthorization.', 'Recheck immediately before the only mutation.')) {
+    Assert-CommandContract $cleanup $contract 'workshop-clear-bench'
+}
+if ($cleanup -match '(?m)^.*herdr worktree remove.*--force' -or $cleanup -match '(?i)branch.*delete') { throw 'workshop-clear-bench must not force removal or delete branches.' }
+$deprecatedParameter = 'Worktree' + 'Path'
+if ($cleanup -cmatch $deprecatedParameter) { throw 'workshop-clear-bench must resolve its worktree path from Herdr.' }
 
 $environment = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
 foreach ($command in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', "Write-Host 'Herdr environment: active", "Write-Host 'Herdr environment: inactive", 'HERDR_ENV')) {

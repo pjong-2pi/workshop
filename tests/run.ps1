@@ -74,4 +74,5 @@ Use-Fixture $false {
 }
 
 & (Join-Path $PSScriptRoot 'validate.ps1')
+& (Join-Path $PSScriptRoot 'workshop-clear-bench.ps1')
 Write-Host 'Workshop deterministic tests passed.'
