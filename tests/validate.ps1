@@ -2,127 +2,102 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $required = @(
-    'AGENTS.md'
-    'WORKFLOWS.md'
-    '.gitignore'
-    '.agents/skills/workshop-foreman/SKILL.md'
-    '.agents/skills/github-create-pr/SKILL.md'
-    '.agents/skills/github-check-pr/SKILL.md'
-    '.agents/skills/github-merge-pr/SKILL.md'
-    '.agents/skills/workshop-setup/SKILL.md'
-    '.codex/agents/master-craftsman.toml'
-    '.codex/agents/inspector.toml'
-    '.codex/agents/master-inspector.toml'
-    'evals/workshop-foreman.md'
-    'scripts/check-environment.ps1'
-    'scripts/setup.ps1'
+    'AGENTS.md', 'README.md', 'WORKFLOWS.md', '.gitignore',
+    '.agents/skills/workshop-foreman/SKILL.md',
+    '.agents/skills/github-create-pr/SKILL.md',
+    '.agents/skills/github-check-pr/SKILL.md',
+    '.agents/skills/github-merge-pr/SKILL.md',
+    '.agents/skills/workshop-setup/SKILL.md',
+    '.codex/agents/master-craftsman.toml',
+    '.codex/agents/inspector.toml',
+    '.codex/agents/master-inspector.toml',
+    'scripts/check-environment.ps1', 'scripts/setup.ps1', 'tests/run.ps1',
+    'evals/workshop-foreman.md', 'evals/skill-evals.json'
 )
+$missing = $required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) }
+if ($missing) { throw "Missing required file(s): $($missing -join ', ')" }
 
-$missing = $required | Where-Object {
-    -not (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf)
-}
-if ($missing) {
-    throw "Missing required file(s): $($missing -join ', ')"
-}
-
-$skills = @(
-    'workshop-foreman'
-    'github-create-pr'
-    'github-check-pr'
-    'github-merge-pr'
-    'workshop-setup'
-)
-foreach ($name in $skills) {
-    $path = Join-Path $root ".agents/skills/$name/SKILL.md"
-    $content = Get-Content -LiteralPath $path -Raw
+foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', 'github-merge-pr', 'workshop-setup')) {
+    $content = Get-Content -LiteralPath (Join-Path $root ".agents/skills/$name/SKILL.md") -Raw
     if ($content -notmatch "(?s)^---\r?\nname: $name\r?\ndescription: .+?\r?\n---") {
         throw "$name has invalid or incomplete frontmatter."
     }
 }
 
-$genericFiles = @(
-    (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md')
-    (Join-Path $root '.codex/agents/master-craftsman.toml')
-    (Join-Path $root '.codex/agents/inspector.toml')
-    (Join-Path $root '.codex/agents/master-inspector.toml')
-)
-foreach ($profile in $genericFiles[1..3]) {
-    $content = Get-Content -LiteralPath $profile -Raw
+foreach ($profile in @('master-craftsman.toml', 'inspector.toml', 'master-inspector.toml')) {
+    $content = Get-Content -LiteralPath (Join-Path $root ".codex/agents/$profile") -Raw
     foreach ($field in @('name', 'description', 'sandbox_mode', 'model', 'model_reasoning_effort', 'developer_instructions')) {
-        if ($content -notmatch "(?m)^$field\s*=") {
-            throw "$(Split-Path $profile -Leaf) is missing $field."
-        }
+        if ($content -notmatch "(?m)^$field\s*=") { throw "$profile is missing $field." }
     }
 }
 
-function Assert-Contains {
-    param(
-        [string] $Content,
-        [string] $Expected,
-        [string] $Contract
-    )
+$setup = Get-Content -LiteralPath (Join-Path $root 'scripts/setup.ps1') -Raw
+if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist environment variables.' }
 
-    if (-not $Content.Contains($Expected)) {
-        throw "$Contract is missing: $Expected"
+$definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
+if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop')
+foreach ($id in $expected) {
+    $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
+    if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
+        [string]::IsNullOrWhiteSpace($evaluation[0].pass_condition) -or
+        [string]::IsNullOrWhiteSpace($evaluation[0].trace) -or $null -eq $evaluation[0].expect -or
+        $evaluation[0].expect.skill_invoked -isnot [System.Array] -or
+        $evaluation[0].expect.skill_not_invoked -isnot [System.Array]) {
+        throw "Skill eval '$id' is incomplete."
     }
+}
+if (@($definitions.evaluations).Count -ne $expected.Count) { throw 'Skill eval definitions contain unexpected scenarios.' }
+
+foreach ($id in @('explicit-setup', 'uninitialized-clone')) {
+    $evaluation = $definitions.evaluations | Where-Object id -eq $id
+    if ($evaluation.expect.skill_invoked -notcontains 'workshop-setup') { throw "Skill eval '$id' must invoke workshop-setup." }
+}
+foreach ($id in @('foreman-task', 'pr-review', 'routine-development', 'initialized-workshop')) {
+    $evaluation = $definitions.evaluations | Where-Object id -eq $id
+    if ($evaluation.expect.skill_not_invoked -notcontains 'workshop-setup') { throw "Skill eval '$id' must avoid workshop-setup." }
+}
+
+function Assert-CommandContract {
+    param([string] $Content, [string] $Expected, [string] $Name)
+    if (-not $Content.Contains($Expected)) { throw "$Name is missing its command contract." }
 }
 
 $create = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-create-pr/SKILL.md') -Raw
-Assert-Contains $create 'gh pr create --repo "$REPO" --base "$BASE" --head "$BRANCH"' 'github-create-pr contract'
-Assert-Contains $create 'gh pr view "$BRANCH" --repo "$REPO" --json' 'github-create-pr verification'
-Assert-Contains $create 'headRefOid' 'github-create-pr SHA verification'
-Assert-Contains $create 'test "$HEAD_SHA" = "$REMOTE_SHA"' 'github-create-pr pushed SHA binding'
+foreach ($command in @('gh pr create --repo "$REPO" --base "$BASE" --head "$BRANCH"', 'gh pr view "$BRANCH" --repo "$REPO" --json', 'headRefOid', 'test "$HEAD_SHA" = "$REMOTE_SHA"')) {
+    Assert-CommandContract $create $command 'github-create-pr'
+}
 
 $check = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-check-pr/SKILL.md') -Raw
-Assert-Contains $check 'gh pr view "$PR" --repo "$REPO" --json' 'github-check-pr structured inspection'
-Assert-Contains $check 'gh pr diff "$PR" --repo "$REPO" --name-only' 'github-check-pr diff scope'
-Assert-Contains $check 'gh pr checks "$PR" --repo "$REPO" --required --json' 'github-check-pr required checks'
-Assert-Contains $check 'EXPECTED_SHA' 'github-check-pr SHA binding'
+foreach ($command in @('gh pr view "$PR" --repo "$REPO" --json', 'gh pr diff "$PR" --repo "$REPO" --name-only', 'gh pr checks "$PR" --repo "$REPO" --required --json', 'EXPECTED_SHA')) {
+    Assert-CommandContract $check $command 'github-check-pr'
+}
 
 $merge = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-merge-pr/SKILL.md') -Raw
-Assert-Contains $merge 'gh repo view "$REPO" --json' 'github-merge-pr repository policy inspection'
-Assert-Contains $merge 'Squash when neither specifies a method and the repository enables squash.' 'github-merge-pr default method'
-Assert-Contains $merge 'headRefOid' 'github-merge-pr SHA verification'
-Assert-Contains $merge 'Never add `--admin`, `--auto`, or `--delete-branch`' 'github-merge-pr prohibited behavior'
-
+foreach ($contract in @('gh repo view "$REPO" --json', 'Squash when neither specifies a method and the repository enables squash.', 'headRefOid', 'Never add `--admin`, `--auto`, or `--delete-branch`')) {
+    Assert-CommandContract $merge $contract 'github-merge-pr'
+}
 $mergeCommands = @($merge -split "\r?\n" | Where-Object { $_.TrimStart().StartsWith('gh pr merge ') })
-if ($mergeCommands.Count -ne 3) {
-    throw "github-merge-pr must document exactly three explicit merge-method commands; found $($mergeCommands.Count)."
-}
+if ($mergeCommands.Count -ne 3) { throw "github-merge-pr must have exactly three merge commands; found $($mergeCommands.Count)." }
 foreach ($command in $mergeCommands) {
-    Assert-Contains $command '--repo "$REPO"' 'github-merge-pr explicit repository'
-    Assert-Contains $command '--match-head-commit "$SHA"' 'github-merge-pr SHA guard'
-    if ($command -match '(?:^|\s)--(?:admin|auto|delete-branch)(?:\s|$)') {
-        throw "github-merge-pr executable command contains a prohibited bypass or cleanup flag: $command"
-    }
-}
-$environmentCheck = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
-foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', 'HERDR_ENV')) {
-    Assert-Contains $environmentCheck $expected 'Workshop environment check'
-}
-Assert-Contains $environmentCheck "Write-Host 'Herdr environment: active" 'Workshop active Herdr state'
-Assert-Contains $environmentCheck "Write-Host 'Herdr environment: inactive" 'Workshop informational Herdr state'
-if ($environmentCheck -match '\$problems\.Add\([^\r\n]*HERDR_ENV') {
-    throw 'workshop-setup must not require HERDR_ENV for readiness.'
+    Assert-CommandContract $command '--repo "$REPO"' 'github-merge-pr'
+    Assert-CommandContract $command '--match-head-commit "$SHA"' 'github-merge-pr'
+    if ($command -match '(?:^|\s)--(?:admin|auto|delete-branch)(?:\s|$)') { throw 'github-merge-pr contains a prohibited merge flag.' }
 }
 
-$setupSkill = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-setup/SKILL.md') -Raw
-foreach ($expected in @('initial bootstrap', 'normal Foreman operations', 'routine development', 'every new Codex session', 'routine environment checking', 'merely because Workshop is in use', '.local/setup-complete', 'scripts/setup.ps1', 'explicit authorization')) {
-    Assert-Contains $setupSkill $expected 'workshop-setup lifecycle'
-}
-
-$setupScript = Get-Content -LiteralPath (Join-Path $root 'scripts/setup.ps1') -Raw
-foreach ($expected in @("Join-Path `$root 'projects'", "Join-Path `$root '.local'", "Join-Path `$local 'setup-complete'", 'check-environment.ps1', 'InstallCodexIntegration', 'herdr integration install codex', 'New-Item -ItemType Directory', 'New-Item -ItemType File')) {
-    Assert-Contains $setupScript $expected 'workshop-setup mechanics'
-}
-if ($setupScript -match 'SetEnvironmentVariable') {
-    throw 'workshop-setup must not invent persistent environment variables.'
+foreach ($contract in @("Join-Path `$root 'projects'", "Join-Path `$root '.local'", "Join-Path `$local 'setup-complete'", 'New-Item -ItemType Directory', 'New-Item -ItemType File', 'Workshop setup verification failed.', 'check-environment.ps1', 'InstallCodexIntegration', 'herdr integration install codex')) {
+    Assert-CommandContract $setup $contract 'workshop-setup'
 }
 
 $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md') -Raw
-foreach ($expected in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove')) {
-    Assert-Contains $foreman $expected 'workshop-foreman Herdr mechanics'
+foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'herdr worktree remove', 'Verify `HERDR_ENV=1`.')) {
+    Assert-CommandContract $foreman $command 'workshop-foreman'
 }
-Assert-Contains $foreman 'Verify `HERDR_ENV=1`.' 'workshop-foreman Herdr requirement'
 
-Write-Host 'Workshop validation passed.'
+$environment = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
+foreach ($command in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', "Write-Host 'Herdr environment: active", "Write-Host 'Herdr environment: inactive", 'HERDR_ENV')) {
+    Assert-CommandContract $environment $command 'check-environment'
+}
+if ($environment -match '\$problems\.Add\([^\r\n]*HERDR_ENV') { throw 'HERDR_ENV must remain informational in the environment diagnostic.' }
+
+Write-Host 'Workshop static validation passed.'

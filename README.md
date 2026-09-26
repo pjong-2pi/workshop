@@ -32,10 +32,27 @@ Run the lower-level environment diagnostic directly when needed:
 pwsh -NoProfile -File scripts/check-environment.ps1
 ```
 
-Validate the repository:
+Run the deterministic test suite:
 
 ```powershell
-pwsh -File tests/validate.ps1
+pwsh -NoProfile -File tests/run.ps1
+```
+
+`tests/validate.ps1` remains the fast static check used by the suite and when
+editing repository structure or eval definitions.
+
+## Evaluation model
+
+Workshop uses three layers: deterministic disposable-fixture tests; behavioral
+skill definitions that a harness later executes, traces, and grades; and full
+workflow evaluations once disposable Herdr orchestration is available. The
+versioned definitions in `evals/skill-evals.json` are inputs to a harness, not
+claims that Codex has been run.
+
+```text
+Deterministic tests -> every change and pull request
+Behavioral skill evals -> harness execution -> trace -> grading
+Full workflow evals -> later
 ```
 
 ## Layout
@@ -44,7 +61,7 @@ pwsh -File tests/validate.ps1
 - `.agents/skills/workshop-setup/` — explicit first-time local bootstrap
 - `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
 - `.codex/agents/` — generic worker and reviewer profiles
-- `evals/` — versioned behavioral evaluation definitions
+- `evals/` — versioned behavioral evaluation definitions and model
 - `scripts/` — bootstrap and environment checks
 - `tests/` — deterministic repository checks
 - `WORKFLOWS.md` — observed workflows and skill candidates
@@ -56,6 +73,5 @@ tracked rather than being treated as runtime state.
 
 ## Current milestone
 
-Prove `workshop-foreman` against disposable fixture repositories: validate the
-environment, create isolated workers, preserve authorization boundaries, review
-the result, and clean up only resources proven safe to remove.
+Establish deterministic setup coverage and behavioral skill-eval definitions;
+full disposable Foreman runs remain a later evaluation layer.

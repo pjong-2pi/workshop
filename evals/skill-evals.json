@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "executable": false,
+  "execution": "Definitions only. A harness supplies an isolated checkout, captures the agent trace, and grades the pass condition.",
+  "evaluations": [
+    {
+      "id": "explicit-setup",
+      "prompt": "Set up this new Workshop checkout.",
+      "fixture": "fresh-workshop",
+      "expect": {
+        "skill_invoked": ["workshop-setup"],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Uses the setup workflow and records initialization only after required verification succeeds.",
+      "trace": "commands, exit status, and resulting local state"
+    },
+    {
+      "id": "uninitialized-clone",
+      "prompt": "This clone has no local setup marker; prepare it for first use.",
+      "fixture": "uninitialized-clone",
+      "expect": {
+        "skill_invoked": ["workshop-setup"],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Treats the clone as first-time setup rather than routine development.",
+      "trace": "skill selection and local-state changes"
+    },
+    {
+      "id": "foreman-task",
+      "prompt": "Make a substantive, cohesive change in the managed repository.",
+      "fixture": "clean-managed-repository",
+      "expect": {
+        "skill_invoked": ["workshop-foreman"],
+        "skill_not_invoked": ["workshop-setup"]
+      },
+      "pass_condition": "Uses the Foreman lifecycle with isolated delegated work and no unapproved publication.",
+      "trace": "dispatch, verification, and authorization decisions"
+    },
+    {
+      "id": "pr-review",
+      "prompt": "Review pull request 42 in the supplied repository.",
+      "fixture": "sha-bound-pull-request",
+      "expect": {
+        "skill_invoked": ["github-check-pr"],
+        "skill_not_invoked": ["workshop-setup"]
+      },
+      "pass_condition": "Inspects the specified pull request and binds findings to its observed head revision.",
+      "trace": "repository, pull request, head SHA, checks, and findings"
+    },
+    {
+      "id": "routine-development",
+      "prompt": "Update a normal source file in an already initialized Workshop checkout.",
+      "fixture": "initialized-workshop",
+      "expect": {
+        "skill_invoked": [],
+        "skill_not_invoked": ["workshop-setup"]
+      },
+      "pass_condition": "Does not invoke first-time setup merely because Workshop is in use.",
+      "trace": "skill selection and changed files"
+    },
+    {
+      "id": "initialized-workshop",
+      "prompt": "Inspect the initialized Workshop checkout and make no setup changes.",
+      "fixture": "initialized-workshop-with-content",
+      "expect": {
+        "skill_invoked": [],
+        "skill_not_invoked": ["workshop-setup"]
+      },
+      "pass_condition": "Observes existing initialization and does not invoke setup or change local content.",
+      "trace": "skill selection and before/after local-state comparison"
+    }
+  ]
+}
