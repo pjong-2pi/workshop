@@ -24,11 +24,14 @@ mean no configured checks, not a successful CI run.
 
 ## Select the method
 
-Use this precedence and no default:
+Use this precedence:
 
 1. Target repository instructions or policy.
 2. Explicit user instruction.
-3. Stop if neither determines one safe, repository-enabled method.
+3. Squash when neither specifies a method and the repository enables squash.
+
+Stop if the selected method is not enabled or neither of the first two rules
+selects a method and squash is disabled.
 
 Run exactly one command matching that decision:
 

@@ -81,7 +81,7 @@ Assert-Contains $check 'EXPECTED_SHA' 'github-check-pr SHA binding'
 
 $merge = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-merge-pr/SKILL.md') -Raw
 Assert-Contains $merge 'gh repo view "$REPO" --json' 'github-merge-pr repository policy inspection'
-Assert-Contains $merge 'Use this precedence and no default' 'github-merge-pr method selection'
+Assert-Contains $merge 'Squash when neither specifies a method and the repository enables squash.' 'github-merge-pr default method'
 Assert-Contains $merge 'headRefOid' 'github-merge-pr SHA verification'
 Assert-Contains $merge 'Never add `--admin`, `--auto`, or `--delete-branch`' 'github-merge-pr prohibited behavior'
 
@@ -96,10 +96,6 @@ foreach ($command in $mergeCommands) {
         throw "github-merge-pr executable command contains a prohibited bypass or cleanup flag: $command"
     }
 }
-if ($merge -match '(?i)prefer(?:s|red)?\s+squash|squash preference') {
-    throw 'github-merge-pr must not impose a squash preference.'
-}
-
 $environmentCheck = Get-Content -LiteralPath (Join-Path $root 'scripts/check-environment.ps1') -Raw
 foreach ($expected in @('RuntimeInformation', 'PSVersionTable', 'git config user.name', 'git config user.email', 'gh auth status --active --hostname github.com', 'codex --version', 'codex login status', 'herdr --version', 'herdr config check', 'HERDR_ENV')) {
     Assert-Contains $environmentCheck $expected 'Workshop environment check'
