@@ -107,10 +107,19 @@ foreach ($id in @('jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', '
 foreach ($contract in @('Get-WorkshopJevDecision', 'scripts/jev-routing.ps1', 'JEV is advisory only', 'authoritative for intake')) {
     Assert-CommandContract $foreman $contract 'workshop-foreman'
 }
+foreach ($contract in @('The selected profile supplies', 'role/developer instructions, sandbox, and reasoning effort.', 'its model overrides only that profile''s default model', 'in the `herdr agent start', '--model` argument for that invocation;', 'fallback or no accepted route uses the', 'current profile default.')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman'
+}
 $jev = Get-Content -LiteralPath (Join-Path $root 'scripts/jev-routing.ps1') -Raw
 foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'foreman-fallback', 'jev-routing.jsonl')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
+foreach ($contract in @("`$agents = @('master-craftsman', 'inspector', 'master-inspector')", "`$models = @('gpt-5.6-luna', 'gpt-5.6-terra')", 'independently of the selected agent role')) {
+    Assert-CommandContract $jev $contract 'jev-routing'
+}
+if ($jev -match '\$profiles\[\$answers\.agent\.choice\]\s*-ne\s*\$answers\.model\.choice') { throw 'JEV agent and model choices must remain independent.' }
+$substantiveRouting = ($definitions.evaluations | Where-Object id -eq 'jev-substantive-task').routing
+if ($substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover the Master Craftsman/Luna override.' }
 $cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
 if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
 

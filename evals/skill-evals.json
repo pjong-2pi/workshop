@@ -91,11 +91,11 @@
     },
     {
       "id": "jev-substantive-task",
-      "prompt": "Make a substantive, cohesive change in the managed repository.",
+      "prompt": "Implement the specified validation rule across the cohesive managed-repository module; the behavior is well-defined, but the change is substantive.",
       "fixture": "clean-managed-repository",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
-      "routing": { "skill": "workshop-foreman", "agent": "master-craftsman", "model": "gpt-5.6-terra", "delegate": true },
-      "pass_condition": "Consumes a high-confidence allowlisted JEV Master Craftsman/Terra/delegate recommendation without changing the required isolated lifecycle and review.",
+      "routing": { "skill": "workshop-foreman", "agent": "master-craftsman", "model": "gpt-5.6-luna", "delegate": true },
+      "pass_condition": "Consumes a high-confidence allowlisted JEV Master Craftsman role/instructions with the cheaper Luna model for a well-defined implementation, without changing the required isolated lifecycle and review.",
       "trace": "JEV decision, confidence, selected skill/agent/model/delegate, worktree lifecycle, checks, tokens, latency, and unavailable downstream metrics"
     },
     {

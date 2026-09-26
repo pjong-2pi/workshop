@@ -4,10 +4,10 @@ $beforeImport = $ErrorActionPreference
 
 function Assert-True { param([bool] $Condition, [string] $Message) if (-not $Condition) { throw $Message } }
 Assert-True ($ErrorActionPreference -eq $beforeImport) 'Importing JEV routing must not change caller error handling.'
-function New-Response([double] $Confidence = 0.9) { [PSCustomObject]@{ model = 'jev-1.13.0'; answers = [PSCustomObject]@{
+function New-Response([double] $Confidence = 0.9, [string] $Agent = 'inspector', [string] $Model = 'gpt-5.6-luna') { [PSCustomObject]@{ model = 'jev-1.13.0'; answers = [PSCustomObject]@{
     skill = [PSCustomObject]@{ type = 'choice'; choice = 'github-check-pr'; confidence = $Confidence; probabilities = @{} }
-    agent = [PSCustomObject]@{ type = 'choice'; choice = 'inspector'; confidence = $Confidence; probabilities = @{} }
-    model = [PSCustomObject]@{ type = 'choice'; choice = 'gpt-5.6-luna'; confidence = $Confidence; probabilities = @{} }
+    agent = [PSCustomObject]@{ type = 'choice'; choice = $Agent; confidence = $Confidence; probabilities = @{} }
+    model = [PSCustomObject]@{ type = 'choice'; choice = $Model; confidence = $Confidence; probabilities = @{} }
     delegate = [PSCustomObject]@{ type = 'choice'; choice = 'true'; confidence = $Confidence; probabilities = @{} }
 }; usage = [PSCustomObject]@{ input_tokens = 12; output_tokens = 3 } } }
 
@@ -16,6 +16,10 @@ try {
     $context = 'intent=review;scope=pr;risk=routine;effort=substantive'
     $good = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response }
     Assert-True ($good.source -eq 'jev' -and $good.skill -eq 'github-check-pr' -and $good.model -eq 'gpt-5.6-luna' -and $good.delegate) 'Valid high-confidence response must be accepted.'
+    $crossModel = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response 0.9 'master-craftsman' 'gpt-5.6-luna' }
+    Assert-True ($crossModel.source -eq 'jev' -and $crossModel.agent -eq 'master-craftsman' -and $crossModel.model -eq 'gpt-5.6-luna') 'An allowed model must be accepted independently of its agent role.'
+    $disallowedModel = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response 0.9 'master-craftsman' 'gpt-5.6-astra' }
+    Assert-True ($disallowedModel.source -eq 'foreman-fallback') 'A disallowed model must fall back.'
     $low = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response 0.39 }
     Assert-True ($low.source -eq 'foreman-fallback') 'Low confidence must fall back.'
     $bad = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) [PSCustomObject]@{ answers = [PSCustomObject]@{} } }

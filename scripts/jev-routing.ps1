@@ -51,7 +51,8 @@ function Get-WorkshopJevDecision {
     $fallback = Get-JevFallbackDecision
     $endpoint = 'https://api.typesafe.ai/v1/systemone'
     $floor = 0.40
-    $profiles = @{ 'master-craftsman' = 'gpt-5.6-terra'; inspector = 'gpt-5.6-luna'; 'master-inspector' = 'gpt-5.6-terra' }
+    $agents = @('master-craftsman', 'inspector', 'master-inspector')
+    $models = @('gpt-5.6-luna', 'gpt-5.6-terra')
     $skills = @('none', 'workshop-foreman', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $reason = 'api-unavailable'
@@ -66,7 +67,7 @@ function Get-WorkshopJevDecision {
         $body = @{ state = $state; model = 'jev-latest'; questions = @{
             skill = @{ type = 'choice'; instructions = 'Which existing Workshop skill is most directly applicable?'; criteria = @{ none = 'No specialized skill applies.'; 'workshop-foreman' = 'Managed project orchestration.'; 'workshop-setup' = 'Explicit first-time Workshop bootstrap.'; 'workshop-clear-bench' = 'Explicit cleanup of a completed Herdr workspace.'; 'github-create-pr' = 'Create a pull request after authorization.'; 'github-check-pr' = 'Inspect an exact pull request.'; 'github-merge-pr' = 'Merge an exact pull request after authorization.' } }
             agent = @{ type = 'choice'; instructions = 'Choose Master Craftsman for implementation or investigation regardless of risk; Inspector only for routine review; Master Inspector only for high-risk review.'; criteria = @{ 'master-craftsman' = 'All implementation and investigation, regardless risk.'; inspector = 'Routine review only.'; 'master-inspector' = 'Review only when risk is architecture, concurrency, security, data-loss, or authority.' } }
-            model = @{ type = 'choice'; instructions = 'Which installed profile model is appropriate?'; criteria = @{ 'gpt-5.6-luna' = 'Inspector profile model.'; 'gpt-5.6-terra' = 'Master Craftsman and Master Inspector profile model.' } }
+            model = @{ type = 'choice'; instructions = 'Choose the cheapest appropriate installed model for the task capability and cost, independently of the selected agent role.'; criteria = @{ 'gpt-5.6-luna' = 'Cheaper choice for well-defined, routine work within its capability.'; 'gpt-5.6-terra' = 'Use when the task needs stronger capability or judgment.' } }
             delegate = @{ type = 'choice'; instructions = 'Should Foreman consider delegation rather than a trivial direct edit?'; criteria = @{ true = 'Substantive or independent specialist work.'; false = 'Trivial direct work may suffice.' } }
         } } | ConvertTo-Json -Depth 8 -Compress
         if ($Request) { $response = & $Request $body } else {
@@ -76,7 +77,7 @@ function Get-WorkshopJevDecision {
             }
         }
         $answers = $response.answers
-        if ($response.model -isnot [string] -or -not (Test-JevChoice $answers.skill $skills $floor) -or -not (Test-JevChoice $answers.agent @($profiles.Keys) $floor) -or -not (Test-JevChoice $answers.model @($profiles.Values) $floor) -or -not (Test-JevChoice $answers.delegate @('true', 'false') $floor) -or $profiles[$answers.agent.choice] -ne $answers.model.choice) { throw 'JEV response failed routing validation.' }
+        if ($response.model -isnot [string] -or -not (Test-JevChoice $answers.skill $skills $floor) -or -not (Test-JevChoice $answers.agent $agents $floor) -or -not (Test-JevChoice $answers.model $models $floor) -or -not (Test-JevChoice $answers.delegate @('true', 'false') $floor)) { throw 'JEV response failed routing validation.' }
         $decision = [PSCustomObject]@{ skill = $answers.skill.choice; agent = $answers.agent.choice; model = $answers.model.choice; delegate = [System.Convert]::ToBoolean($answers.delegate.choice); source = 'jev' }
         $jevModel = $response.model
         $confidences = [PSCustomObject]@{ skill = $answers.skill.confidence; agent = $answers.agent.confidence; model = $answers.model.confidence; delegate = $answers.delegate.confidence }

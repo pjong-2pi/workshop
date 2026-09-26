@@ -70,10 +70,13 @@ herdr agent get $Agent
 A workspace without a ready agent is not a dispatched worker.
 
 Prefer an applicable target-project profile from `.codex/agents/`; otherwise use
-Workshop's generic profile for the selected role. Map its model, sandbox, and
-reasoning effort into `herdr agent start`. Put its developer instructions in the
-worker prompt verbatim; they are prompt content, not CLI arguments. Never assume
-Herdr loads Codex profile files itself.
+Workshop's generic profile for the selected role. The selected profile supplies
+role/developer instructions, sandbox, and reasoning effort. When JEV is accepted,
+its model overrides only that profile's default model in the `herdr agent start
+--model` argument for that invocation; fallback or no accepted route uses the
+current profile default. Put its developer instructions in the worker prompt
+verbatim; they are prompt content, not CLI arguments. Never assume Herdr loads
+Codex profile files itself. Foreman remains authoritative.
 
 Prompt with only the outcome, owned scope, dependencies, checks, non-goals, and
 authorization boundary. Point to repository paths instead of copying file contents
