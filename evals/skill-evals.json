@@ -79,6 +79,42 @@
       },
       "pass_condition": "Requires immediate explicit removal authorization, uses one list source selector, and only removes the recorded clean workspace with the safe Herdr command before verifying absence.",
       "trace": "workspace ID, completion evidence, authorization, preflight, removal, and post-removal listing"
+    },
+    {
+      "id": "jev-pr-review",
+      "prompt": "Review pull request 42 in the supplied repository.",
+      "fixture": "sha-bound-pull-request",
+      "expect": { "skill_invoked": ["workshop-foreman", "github-check-pr"], "skill_not_invoked": [] },
+      "routing": { "skill": "github-check-pr", "agent": "inspector", "model": "gpt-5.6-luna", "delegate": true },
+      "pass_condition": "Consumes a high-confidence allowlisted JEV review recommendation as advisory input while Foreman retains PR inspection and authorization boundaries.",
+      "trace": "JEV decision, confidence, selected skill/agent/model/delegate, Foreman decision, tokens, latency, and unavailable downstream metrics"
+    },
+    {
+      "id": "jev-substantive-task",
+      "prompt": "Make a substantive, cohesive change in the managed repository.",
+      "fixture": "clean-managed-repository",
+      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
+      "routing": { "skill": "workshop-foreman", "agent": "master-craftsman", "model": "gpt-5.6-terra", "delegate": true },
+      "pass_condition": "Consumes a high-confidence allowlisted JEV Master Craftsman/Terra/delegate recommendation without changing the required isolated lifecycle and review.",
+      "trace": "JEV decision, confidence, selected skill/agent/model/delegate, worktree lifecycle, checks, tokens, latency, and unavailable downstream metrics"
+    },
+    {
+      "id": "jev-trivial-task",
+      "prompt": "Correct one obvious typo in the supplied local file.",
+      "fixture": "initialized-workshop",
+      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
+      "routing": { "skill": "none", "agent": "master-craftsman", "model": "gpt-5.6-terra", "delegate": false },
+      "pass_condition": "Consumes a high-confidence allowlisted non-delegated recommendation while Foreman performs the trivial direct edit.",
+      "trace": "JEV decision, confidence, selected skill/agent/model/delegate, final Foreman delegation, tokens, latency, and unavailable downstream metrics"
+    },
+    {
+      "id": "jev-fallback",
+      "prompt": "Make a task routing decision while JEV is unavailable or returns malformed, low-confidence, or disallowed choices.",
+      "fixture": "offline-workshop",
+      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
+      "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
+      "pass_condition": "Uses existing Foreman judgment, records only observed fallback telemetry, and performs no network-dependent test action.",
+      "trace": "fallback reason, Foreman decision, selected skill/agent/model/delegate, latency, and null downstream task metrics"
     }
   ]
 }

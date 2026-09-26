@@ -10,6 +10,26 @@ or investigation to a `master-craftsman`; one worker is enough unless scopes are
 genuinely independent. Do not add a management layer or delegation chain. Handle
 only incidental, obvious edits directly.
 
+## Advisory JEV routing
+
+For every task, map the request without copying its text into this exact
+single-line routing context grammar:
+`intent=<setup|bench-cleanup|pr-create|pr-check|pr-merge|implementation|investigation|review|other>;scope=<workshop|managed-repo|pr|workspace|local>;risk=<routine|architecture|concurrency|security|data-loss|authority>;effort=<trivial|substantive>`.
+It contains only allowlisted tags: never include credentials, secrets,
+private/customer data, code or file contents, or authorization material. Import
+`scripts/jev-routing.ps1` and call
+`Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot`.
+JEV is advisory only:
+use its minimal `skill`, `agent`, `model`, and `delegate` decision only when its
+source is `jev`; otherwise use existing Foreman judgment. Foreman remains
+authoritative for intake, user interaction, authorization, Herdr/worktrees,
+verification, review, escalation, and cleanup. Never let a JEV decision bypass
+these rules or select anything outside the existing skills and profiles.
+
+The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
+bounded API call and confidence/allowlist validation, and records an ignored local
+telemetry row. Do not run it in deterministic tests with network credentials.
+
 ## Select and prepare the target
 
 Resolve the exact target repository from the request or ask when ambiguity risks

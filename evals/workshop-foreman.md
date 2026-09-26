@@ -37,3 +37,13 @@ commit, fixture, tool versions, scenario input, trace, result, duration, grader,
 and failure reason under ignored `evals/runs/`. Authorization and destructive
 lifecycle scenarios require three consecutive passes before release. Other live
 scenarios require one pass unless a failure demonstrates nondeterminism.
+
+## Later JEV comparison
+
+Run each routing case twice against the same fixture and task: a without-JEV arm
+using Foreman judgment alone, then a with-JEV arm using the advisory helper. Record
+the expected route and final route to grade routing accuracy; router and task
+tokens; router and task latency; recommended and final delegation/model choices;
+and total task cost. The helper records only observed router fields locally:
+versioned JEV model, per-field accepted confidences, tokens, and latency. Keep all
+downstream task metrics and total cost `null` until the live harness observes them.
