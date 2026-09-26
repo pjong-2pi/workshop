@@ -1,6 +1,7 @@
 # Managed repositories and temporary worktrees are independent Git repositories.
 /projects/
 /.worktrees/
+/knowledgebase/
 
 # Machine-local configuration, credentials, and runtime state.
 /.local/
