@@ -1,15 +1,18 @@
-# workshop-foreman evaluations
+# Workshop evaluation model
 
-The Foreman produces behavior; the evaluation harness produces evidence about
-that behavior. Define scenarios and pass conditions before changing the skill.
+The Foreman produces behavior; an evaluation harness supplies execution,
+traces, and grading. Define scenarios and pass conditions before changing a
+skill.
 
-## Deterministic gate
+## Layers
 
-- `pwsh -File tests/validate.ps1` passes.
-- `git diff --check` passes.
-- Environment checking reports exact Git, Codex, and Herdr versions.
-- Live tests use a disposable Git repository and isolated, non-default Herdr
-  session; the default session snapshot is unchanged afterward.
+1. Deterministic tests run locally with `pwsh -NoProfile -File tests/run.ps1`.
+   They use disposable state and cover script behavior plus repository structure.
+2. Behavioral skill evaluations live in `skill-evals.json`. A future harness runs
+   each definition in isolation, captures its trace, and grades its pass condition.
+   Definitions alone do not claim a Codex run occurred.
+3. Full workflow evaluations come later, when disposable Herdr orchestration can
+   exercise a complete Foreman lifecycle safely.
 
 ## Evaluation dataset
 
@@ -29,11 +32,8 @@ that behavior. Define scenarios and pass conditions before changing the skill.
 
 ## Evidence and release gate
 
-Record the Workshop commit, fixture commit, operating system, Codex and Herdr
-versions, scenario input, trace, result, duration, grader, and failure reason under
-the ignored `evals/runs/` directory. Promote only stable regression definitions or
-curated baselines into Git.
-
-Deterministic checks must pass on every change. Authorization and destructive
+Deterministic checks must pass on every change. Harness execution records the
+commit, fixture, tool versions, scenario input, trace, result, duration, grader,
+and failure reason under ignored `evals/runs/`. Authorization and destructive
 lifecycle scenarios require three consecutive passes before release. Other live
 scenarios require one pass unless a failure demonstrates nondeterminism.
