@@ -71,10 +71,10 @@
     },
     {
       "id": "clear-completed-bench",
-      "prompt": "The recorded workspace w12G is clean and integrated; remove it now.",
+      "prompt": "/workshop-clear-bench w12G",
       "fixture": "completed-herdr-workspace",
       "expect": {
-        "skill_invoked": ["workspace-clear-bench"],
+        "skill_invoked": ["workshop-clear-bench"],
         "skill_not_invoked": []
       },
       "pass_condition": "Requires immediate explicit removal authorization, uses one list source selector, and only removes the recorded clean workspace with the safe Herdr command before verifying absence.",
