@@ -10,6 +10,9 @@ $required = @(
     '.agents/skills/workshop-setup/SKILL.md',
     '.agents/skills/workshop-clear-bench/SKILL.md',
     '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1',
+    '.agents/skills/workshop-stocktake/SKILL.md',
+    '.agents/skills/workshop-stocktake/scripts/update-model-catalog.ps1',
+    'catalog/models.md',
     '.codex/agents/master-craftsman.toml',
     '.codex/agents/inspector.toml',
     '.codex/agents/master-inspector.toml',
@@ -19,7 +22,7 @@ $required = @(
 $missing = $required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $root $_) -PathType Leaf) }
 if ($missing) { throw "Missing required file(s): $($missing -join ', ')" }
 
-foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', 'github-merge-pr', 'workshop-setup', 'workshop-clear-bench')) {
+foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', 'github-merge-pr', 'workshop-setup', 'workshop-clear-bench', 'workshop-stocktake')) {
     $content = Get-Content -LiteralPath (Join-Path $root ".agents/skills/$name/SKILL.md") -Raw
     if ($content -notmatch "(?s)^---\r?\nname: $name\r?\ndescription: .+?\r?\n---") {
         throw "$name has invalid or incomplete frontmatter."
@@ -38,7 +41,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'stocktake-models')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -143,5 +146,14 @@ foreach ($command in @('RuntimeInformation', 'PSVersionTable', 'git config user.
     Assert-CommandContract $environment $command 'check-environment'
 }
 if ($environment -match '\$problems\.Add\([^\r\n]*HERDR_ENV') { throw 'HERDR_ENV must remain informational in the environment diagnostic.' }
+
+$stocktake = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-stocktake/SKILL.md') -Raw
+foreach ($contract in @('Codex''s local app-server `model/list`', 'unknown', 'never select, rank, or recommend', 'No periodic refresh')) {
+    Assert-CommandContract $stocktake $contract 'workshop-stocktake'
+}
+$stocktakeScript = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-stocktake/scripts/update-model-catalog.ps1') -Raw
+foreach ($contract in @("'model/list'", "'initialized'", 'Assert-ModelPage', 'includeHidden = $false', 'available to current Codex account', 'Last checked (UTC)', 'Unchanged model catalog')) {
+    Assert-CommandContract $stocktakeScript $contract 'workshop-stocktake script'
+}
 
 Write-Host 'Workshop static validation passed.'
