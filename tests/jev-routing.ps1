@@ -16,6 +16,10 @@ try {
     $context = 'intent=review;scope=pr;risk=routine;effort=substantive'
     $good = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response }
     Assert-True ($good.source -eq 'jev' -and $good.skill -eq 'github-check-pr' -and $good.model -eq 'gpt-5.6-luna' -and $good.delegate) 'Valid high-confidence response must be accepted.'
+    $withoutMetadata = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) $response = New-Response; $response.PSObject.Properties.Remove('model'); $response }
+    Assert-True ($withoutMetadata.source -eq 'jev' -and $withoutMetadata.skill -eq 'github-check-pr') 'Valid high-confidence response without optional model metadata must be accepted.'
+    Complete-WorkshopJevTelemetry -Root $root -RoutingId $withoutMetadata.routing_id -FinalRoute github-check-pr -FinalDelegation $true -FinalModel gpt-5.6-luna -Outcome completed -BaselineActualTotalTokens 120 -ProjectedJevRouteTokens 100 -DownstreamTaskLatencyMs 42
+    Complete-WorkshopJevTelemetry -Root $root -RoutingId $withoutMetadata.routing_id -FinalRoute safe-foreman-route -FinalDelegation $false -FinalModel safe-foreman-model -Outcome blocked
     $crossModel = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response 0.9 'master-craftsman' 'gpt-5.6-luna' }
     Assert-True ($crossModel.source -eq 'jev' -and $crossModel.agent -eq 'master-craftsman' -and $crossModel.model -eq 'gpt-5.6-luna') 'An allowed model must be accepted independently of its agent role.'
     $disallowedModel = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response 0.9 'master-craftsman' 'gpt-5.6-astra' }
@@ -38,7 +42,11 @@ try {
     $telemetryFailure = Get-WorkshopJevDecision -RoutingContext $context -Root $blockedRoot -Request { param($body) [PSCustomObject]@{ answers = [PSCustomObject]@{} } }
     Assert-True ($telemetryFailure.source -eq 'foreman-fallback') 'Telemetry failure must not prevent a fallback decision.'
     $telemetry = Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') -Raw
-    Assert-True ($telemetry -notmatch 'Alice Example|test-key' -and $telemetry -match 'jev_response_model":"jev-1.13.0"' -and $telemetry -match 'skill_confidence":0.9' -and $telemetry -match 'agent_confidence":0.9' -and $telemetry -match 'model_confidence":0.9' -and $telemetry -match 'delegate_confidence":0.9' -and $telemetry -match 'downstream_task_tokens":null' -and $telemetry -match 'total_task_cost":null') 'Telemetry must omit task/key and preserve observed routing metadata with unavailable downstream metrics.'
+    $completion = @(Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json | Where-Object event -eq 'completion')[0]
+    Assert-True ($completion.routing_id -eq $withoutMetadata.routing_id -and $completion.outcome -eq 'completed') 'Completion telemetry must correlate to its routing decision.'
+    $actualOutcome = @(Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json | Where-Object final_route -eq 'safe-foreman-route')[0]
+    Assert-True ($actualOutcome.final_model -eq 'safe-foreman-model' -and $actualOutcome.outcome -eq 'blocked') 'Completion telemetry must accept actual route and model values outside JEV allowlists.'
+    Assert-True ($telemetry -notmatch 'Alice Example|test-key' -and $telemetry -match 'jev_response_model":"jev-1.13.0"' -and $telemetry -match 'skill_confidence":0.9' -and $telemetry -match 'agent_confidence":0.9' -and $telemetry -match 'model_confidence":0.9' -and $telemetry -match 'delegate_confidence":0.9' -and $telemetry -match '"event":"completion"' -and $telemetry -match '"final_route":"github-check-pr"' -and $telemetry -match '"baseline_actual_total_tokens":120' -and $telemetry -match '"projected_jev_total_tokens":115' -and $telemetry -match '"downstream_task_latency_ms":42') 'Telemetry must omit task/key and preserve observed routing and completion metrics.'
 } finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
 
 Write-Host 'Workshop JEV routing tests passed.'

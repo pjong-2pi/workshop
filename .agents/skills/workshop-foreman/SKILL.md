@@ -17,8 +17,12 @@ single-line routing context grammar:
 `intent=<setup|bench-cleanup|pr-create|pr-check|pr-merge|implementation|investigation|review|other>;scope=<workshop|managed-repo|pr|workspace|local>;risk=<routine|architecture|concurrency|security|data-loss|authority>;effort=<trivial|substantive>`.
 It contains only allowlisted tags: never include credentials, secrets,
 private/customer data, code or file contents, or authorization material. Import
-`scripts/jev-routing.ps1` and call
-`Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot`.
+the repository-root script (never a skill-local `scripts` path):
+
+```powershell
+. (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
+$JevDecision = Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot
+```
 JEV is advisory only:
 use its minimal `skill`, `agent`, `model`, and `delegate` decision only when its
 source is `jev`; otherwise use existing Foreman judgment. Foreman remains
@@ -29,6 +33,19 @@ these rules or select anything outside the existing skills and profiles.
 The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
 bounded API call and confidence/allowlist validation, and records an ignored local
 telemetry row. Do not run it in deterministic tests with network credentials.
+At the user-facing gate for every routed task, including fallback, blocked, and
+error paths, close that row in `finally` with the same `$JevDecision.routing_id`:
+
+```powershell
+Complete-WorkshopJevTelemetry -Root $WorkshopRoot -RoutingId $JevDecision.routing_id -FinalRoute $FinalRoute -FinalDelegation $FinalDelegation -FinalModel $FinalModel -Outcome $Outcome -BaselineActualTotalTokens $BaselineActualTotalTokens -ProjectedJevRouteTokens $ProjectedJevRouteTokens
+```
+
+`$FinalRoute` and `$FinalModel` describe Foreman's actual final outcome, while
+`$Outcome` is one of `completed`, `blocked`, `error`, or `cancelled`; the completion call records
+the explicit observed baseline total and the explicit JEV-route token projection.
+When both router counters are observed, it adds them to the projection; otherwise
+the projected total remains null. Never estimate metrics, use prices, or include
+request text, credentials, code, or private data.
 
 ## Select and prepare the target
 
@@ -102,7 +119,9 @@ scoped changes, pushing the dedicated branch, and creating a PR after required
 verification and review. Do not ask separately unless the user sets an earlier
 stopping gate or says not to create a PR. Read-only answers and investigations do
 not authorize mutation or a PR. This authorization never includes merge or branch
-deletion; stop before either unless separately authorized.
+deletion; stop before either unless separately authorized. Treat a user reply of
+`LGTM` to an exact PR handoff as explicit authorization to merge that PR and run
+verified post-merge bench cleanup; it grants no broader authority.
 
 Give every reviewer a separate read-only workspace. Use the target's applicable
 review profile when present, otherwise Workshop's `inspector` or
