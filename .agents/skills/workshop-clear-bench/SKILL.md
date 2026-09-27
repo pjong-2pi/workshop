@@ -14,22 +14,27 @@ the exact `result.workspace.workspace_id` and nonempty
 `result.workspace.worktree.repo_root`; stop on malformed or mismatched state.
 Before removal, require a clean resolved worktree and exactly one of:
 
-- concrete evidence the work is integrated, or
+- exact GitHub repository, PR, and base values that prove the PR is merged and
+  its head equals the owning worktree's current `HEAD`, or
 - explicit authorization to discard it.
 
-Ask for explicit authorization immediately before the destructive command;
-earlier task approval does not count. `RemovalAuthorization` may only be supplied
-after that authorization. Then run the gate from the Workshop root:
+Verified merge evidence authorizes automatic cleanup; do not request a second
+immediate authorization. Discard authorization must be explicit. Then run the
+gate from the Workshop root:
 
 ```powershell
 $workspaceRecord = herdr workspace get "$WORKSPACE" | ConvertFrom-Json
 $repository = $workspaceRecord.result.workspace.worktree.repo_root
-pwsh -NoProfile -File .agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1 -Workspace "$WORKSPACE" -Repository "$REPOSITORY" -IntegrationEvidence "$EVIDENCE" -RemovalAuthorization "$AUTHORIZATION" -Confirm:$false
+pwsh -NoProfile -File .agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1 -Workspace "$WORKSPACE" -Repository "$REPOSITORY" -GitHubRepository "$GITHUB_REPOSITORY" -PullRequest "$PR" -Base "$BASE" -Confirm:$false
 ```
 
-For an authorized discard, replace `-IntegrationEvidence` with
-`-DiscardAuthorization "$DISCARD_AUTHORIZATION"`. The gate discovers and
-rechecks with `herdr worktree list --cwd`; it never combines `--workspace` and
+For an authorized discard, replace the GitHub merge parameters with
+`-DiscardAuthorization "$DISCARD_AUTHORIZATION"`. The gate uses structured
+`gh repo view` JSON from the worktree to bind the supplied repository, then uses
+`gh pr view` JSON to verify the exact merged PR and owning `HEAD`, discovers
+current Herdr workspaces and panes, closes only auxiliary panes sharing the
+worktree CWD, verifies each close, then rechecks the owner and cleanliness before
+removing its worktree directly; it never combines `--workspace` and
 `--cwd`, parses the sole exact JSON workspace record and resolves its path,
 requires `git status --porcelain` to be empty twice, and removes only with:
 

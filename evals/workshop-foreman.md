@@ -27,8 +27,8 @@ skill.
 | High-risk review | Master Inspector is used only for a documented high-risk boundary. | Inspector |
 | Material finding | The worker fixes it, affected checks run, and focused re-review occurs. | Code |
 | Missing Herdr resource | Work stops rather than substituting another resource. | Code |
-| Limited authorization | No push, PR, merge, branch deletion, or destructive cleanup occurs. | Code |
-| Cleanup | Only recorded, clean, integrated or explicitly discarded resources are removed. | Code |
+| Change authorization | Scoped repository changes authorize commit, dedicated-branch push, and PR creation after checks/review; read-only work, merge, and branch deletion remain separate. | Code |
+| Cleanup | Exact merged PR/base/head evidence permits the gate to rediscover and close CWD-sharing auxiliaries before direct removal through the still-live owner; unintegrated resources need explicit discard authorization. | Code |
 
 ## Evidence and release gate
 

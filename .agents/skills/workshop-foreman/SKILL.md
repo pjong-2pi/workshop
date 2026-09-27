@@ -48,7 +48,9 @@ CLI help only when a command is rejected or the installed version has drifted.
 ## Dispatch
 
 Create one dedicated Herdr workspace and Git worktree per worker from the refreshed
-base, then record the returned workspace and pane identifiers:
+base, then record it as the owning workspace with its returned pane identifiers.
+Auxiliary workspaces are recorded CWD-sharing workspace IDs excluding the owning
+workspace ID, even though the owner is also a worker workspace:
 
 ```powershell
 herdr worktree create --workspace $Workspace --cwd $Repository --branch $Branch --base $Base --path $WorktreePath --label $Label --no-focus --trust-repository
@@ -95,8 +97,12 @@ herdr agent prompt $Agent $Prompt --wait --until idle --until done --until block
 herdr agent read $Agent
 ```
 
-Stop at a real blocker or before any unapproved push, PR, merge, or destructive
-operation.
+A user request authorizing repository changes also authorizes committing the
+scoped changes, pushing the dedicated branch, and creating a PR after required
+verification and review. Do not ask separately unless the user sets an earlier
+stopping gate or says not to create a PR. Read-only answers and investigations do
+not authorize mutation or a PR. This authorization never includes merge or branch
+deletion; stop before either unless separately authorized.
 
 Give every reviewer a separate read-only workspace. Use the target's applicable
 review profile when present, otherwise Workshop's `inspector` or
@@ -108,12 +114,17 @@ re-review.
 ## Finish
 
 Inspect the complete diff and rerun checks required by the target instructions or
-not adequately evidenced by workers. After integration, remove only recorded,
-clean worktrees that are integrated or explicitly approved for discard:
+not adequately evidenced by workers. After verified GitHub merge, pass the exact
+PR, repository, and base to the clear-bench gate with the owning workspace ID.
+The gate re-verifies the merge, re-discovers and closes only current auxiliary
+CWD-sharing workspaces, then removes the clean integrated worktree while keeping
+the owner live. The verified merge is sufficient authority; do not ask again. An
+unintegrated worktree still needs explicit discard authorization.
 
 ```powershell
-herdr worktree remove --workspace $Workspace --trust-repository
+pwsh -NoProfile -File .agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1 -Workspace "$Workspace" -Repository "$Repository" -GitHubRepository "$GitHubRepository" -PullRequest "$PullRequest" -Base "$Base" -Confirm:$false
 ```
 
-Never add `--force` or delete a branch without approval. Report the reached gate
-or the concrete blocker; do not claim unobserved success.
+Never add `--force` or delete a branch without approval. Stop on inconsistent
+state; do not retry with another tool. Report the reached gate or the concrete
+blocker; do not claim unobserved success.
