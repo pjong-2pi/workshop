@@ -12,12 +12,14 @@ function Test-JevChoice {
 }
 
 function Write-JevRoutingTelemetry {
-    param([string] $Root, [object] $Decision, [string] $Reason, [int] $LatencyMs, [object] $Usage, [string] $JevModel, [object] $Confidences)
+    param([string] $Root, [guid] $RoutingId, [object] $Decision, [string] $Reason, [int] $LatencyMs, [object] $Usage, [string] $JevModel, [object] $Confidences)
 
     try {
         $directory = Join-Path $Root '.local'
         New-Item -ItemType Directory -Force -Path $directory | Out-Null
         [PSCustomObject]@{
+            event = 'routing'
+            routing_id = $RoutingId
             timestamp_utc = [DateTime]::UtcNow.ToString('o')
             source = $Decision.source
             skill = $Decision.skill
@@ -33,10 +35,39 @@ function Write-JevRoutingTelemetry {
             agent_confidence = if ($Confidences) { $Confidences.agent } else { $null }
             model_confidence = if ($Confidences) { $Confidences.model } else { $null }
             delegate_confidence = if ($Confidences) { $Confidences.delegate } else { $null }
-            downstream_task_tokens = $null
-            downstream_task_latency_ms = $null
-            downstream_task_cost = $null
-            total_task_cost = $null
+        } | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl')
+    } catch {}
+}
+
+function Complete-WorkshopJevTelemetry {
+    param(
+        [Parameter(Mandatory)][string] $Root,
+        [Parameter(Mandatory)][guid] $RoutingId,
+        [Parameter(Mandatory)][string] $FinalRoute,
+        [Parameter(Mandatory)][bool] $FinalDelegation,
+        [string] $FinalModel,
+        [Parameter(Mandatory)][ValidateSet('completed', 'blocked', 'error', 'cancelled')][string] $Outcome,
+        [Nullable[long]] $BaselineActualTotalTokens,
+        [Nullable[long]] $ProjectedJevRouteTokens,
+        [Nullable[long]] $DownstreamTaskLatencyMs
+    )
+
+    try {
+        $directory = Join-Path $Root '.local'
+        New-Item -ItemType Directory -Force -Path $directory | Out-Null
+        $routing = @(Get-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl') | ConvertFrom-Json | Where-Object { $_.event -eq 'routing' -and $_.routing_id -eq $RoutingId } | Select-Object -Last 1)[0]
+        $projectedJevTotalTokens = if ($null -ne $ProjectedJevRouteTokens -and $routing -and $null -ne $routing.jev_input_tokens -and $null -ne $routing.jev_output_tokens) { $ProjectedJevRouteTokens + $routing.jev_input_tokens + $routing.jev_output_tokens } else { $null }
+        [PSCustomObject]@{
+            event = 'completion'
+            routing_id = $RoutingId
+            timestamp_utc = [DateTime]::UtcNow.ToString('o')
+            final_route = $FinalRoute
+            final_delegation = $FinalDelegation
+            final_model = $FinalModel
+            outcome = $Outcome
+            baseline_actual_total_tokens = $BaselineActualTotalTokens
+            projected_jev_total_tokens = $projectedJevTotalTokens
+            downstream_task_latency_ms = $DownstreamTaskLatencyMs
         } | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl')
     } catch {}
 }
@@ -49,6 +80,7 @@ function Get-WorkshopJevDecision {
     )
 
     $fallback = Get-JevFallbackDecision
+    $routingId = [guid]::NewGuid()
     $endpoint = 'https://api.typesafe.ai/v1/systemone'
     $floor = 0.40
     $agents = @('master-craftsman', 'inspector', 'master-inspector')
@@ -77,18 +109,19 @@ function Get-WorkshopJevDecision {
             }
         }
         $answers = $response.answers
-        if ($response.model -isnot [string] -or -not (Test-JevChoice $answers.skill $skills $floor) -or -not (Test-JevChoice $answers.agent $agents $floor) -or -not (Test-JevChoice $answers.model $models $floor) -or -not (Test-JevChoice $answers.delegate @('true', 'false') $floor)) { throw 'JEV response failed routing validation.' }
-        $decision = [PSCustomObject]@{ skill = $answers.skill.choice; agent = $answers.agent.choice; model = $answers.model.choice; delegate = [System.Convert]::ToBoolean($answers.delegate.choice); source = 'jev' }
+        if (($null -ne $response.model -and $response.model -isnot [string]) -or -not (Test-JevChoice $answers.skill $skills $floor) -or -not (Test-JevChoice $answers.agent $agents $floor) -or -not (Test-JevChoice $answers.model $models $floor) -or -not (Test-JevChoice $answers.delegate @('true', 'false') $floor)) { throw 'JEV response failed routing validation.' }
+        $decision = [PSCustomObject]@{ skill = $answers.skill.choice; agent = $answers.agent.choice; model = $answers.model.choice; delegate = [System.Convert]::ToBoolean($answers.delegate.choice); source = 'jev'; routing_id = $routingId }
         $jevModel = $response.model
         $confidences = [PSCustomObject]@{ skill = $answers.skill.confidence; agent = $answers.agent.confidence; model = $answers.model.confidence; delegate = $answers.delegate.confidence }
         $reason = 'accepted'
     } catch {
         $decision = $fallback
+        $decision | Add-Member -NotePropertyName routing_id -NotePropertyValue $routingId
         if ($_.Exception.Message -eq 'JEV response failed routing validation.') { $reason = 'rejected-response' }
         if ($_.Exception.Message -eq 'JEV routing context is invalid.') { $reason = 'context-rejected' }
     } finally {
         $watch.Stop()
-        Write-JevRoutingTelemetry -Root $Root -Decision $decision -Reason $reason -LatencyMs $watch.ElapsedMilliseconds -Usage $(if ($response) { $response.usage } else { $null }) -JevModel $jevModel -Confidences $confidences
+        Write-JevRoutingTelemetry -Root $Root -RoutingId $routingId -Decision $decision -Reason $reason -LatencyMs $watch.ElapsedMilliseconds -Usage $(if ($response) { $response.usage } else { $null }) -JevModel $jevModel -Confidences $confidences
     }
     $decision
 }

@@ -44,9 +44,11 @@ editing repository structure or eval definitions.
 Foreman consults JEV as a confidence-gated advisory route for every task. It uses
 the fixed TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, then falls
 back to Foreman judgment on any unavailable, malformed, low-confidence, or
-disallowed result. Ignored `.local/jev-routing.jsonl` records observed routing,
-JEV token usage, and latency; downstream task tokens, latency, and cost remain
-null until a live harness observes them.
+disallowed result. Ignored `.local/jev-routing.jsonl` correlates observed routing
+with the Foreman's final route, delegation, model, duration, outcome, and any
+explicit observed baseline total or JEV-route token projection. The latter includes
+observed JEV input/output tokens; unavailable totals remain null. It uses no prices
+or token estimator.
 
 ## Evaluation model
 

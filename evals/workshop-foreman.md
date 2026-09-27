@@ -44,6 +44,7 @@ Run each routing case twice against the same fixture and task: a without-JEV arm
 using Foreman judgment alone, then a with-JEV arm using the advisory helper. Record
 the expected route and final route to grade routing accuracy; router and task
 tokens; router and task latency; recommended and final delegation/model choices;
-and total task cost. The helper records only observed router fields locally:
-versioned JEV model, per-field accepted confidences, tokens, and latency. Keep all
-downstream task metrics and total cost `null` until the live harness observes them.
+and total tokens. The helper correlates its routing row with a completion row at
+the user-facing gate. It compares an explicit observed baseline total with an
+explicit JEV-route token projection plus observed JEV input/output tokens. Keep a
+total null until every required counter is available; use no prices or estimator.
