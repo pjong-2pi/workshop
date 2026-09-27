@@ -14,8 +14,10 @@ function New-Response([double] $Confidence = 0.9, [string] $Agent = 'inspector',
 $root = Join-Path ([IO.Path]::GetTempPath()) "workshop-jev-test-$([guid]::NewGuid())"
 try {
     $context = 'intent=review;scope=pr;risk=routine;effort=substantive'
-    $good = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) New-Response }
+    $requestBodies = [Collections.Generic.List[string]]::new()
+    $good = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) $requestBodies.Add($body); New-Response }
     Assert-True ($good.source -eq 'jev' -and $good.skill -eq 'github-check-pr' -and $good.model -eq 'gpt-5.6-luna' -and $good.delegate) 'Valid high-confidence response must be accepted.'
+    Assert-True (((ConvertFrom-Json $requestBodies[0]).questions.skill.instructions) -eq 'Apply the first matching rule in this exact order: setup -> workshop-setup; bench-cleanup -> workshop-clear-bench; pr-create -> github-create-pr; pr-check or review+scope=pr -> github-check-pr; pr-merge -> github-merge-pr; otherwise substantive implementation, investigation, review, or planning in workshop or managed-repo -> workshop-foreman; none only when no earlier rule matches.') 'The generated skill request must preserve ordered precedence and the Foreman fallback.'
     $withoutMetadata = Get-WorkshopJevDecision -RoutingContext $context -Root $root -Request { param($body) $response = New-Response; $response.PSObject.Properties.Remove('model'); $response }
     Assert-True ($withoutMetadata.source -eq 'jev' -and $withoutMetadata.skill -eq 'github-check-pr') 'Valid high-confidence response without optional model metadata must be accepted.'
     Complete-WorkshopJevTelemetry -Root $root -RoutingId $withoutMetadata.routing_id -FinalRoute github-check-pr -FinalDelegation $true -FinalModel gpt-5.6-luna -Outcome completed -BaselineActualTotalTokens 120 -ProjectedJevRouteTokens 100 -DownstreamTaskLatencyMs 42
