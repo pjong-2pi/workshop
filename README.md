@@ -67,10 +67,12 @@ Full workflow evals -> later
 - `.agents/skills/workshop-foreman/` — primary Herdr orchestration skill
 - `.agents/skills/workshop-setup/` — explicit first-time local bootstrap
 - `.agents/skills/workshop-clear-bench/` — guarded cleanup of completed Herdr workspaces
+- `.agents/skills/workshop-stocktake/` — on-demand local Codex model inventory
 - `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
 - `.codex/agents/` — generic worker and reviewer profiles
 - `evals/` — versioned behavioral evaluation definitions and model
 - `scripts/` — bootstrap and environment checks
+- `catalog/models.md` — versioned observed model inventory for future routing input
 - `tests/` — deterministic repository checks
 - `WORKFLOWS.md` — observed workflows and skill candidates
 

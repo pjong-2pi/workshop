@@ -115,6 +115,17 @@
       "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
       "pass_condition": "Uses existing Foreman judgment, records only observed fallback telemetry, and performs no network-dependent test action.",
       "trace": "fallback reason, Foreman decision, selected skill/agent/model/delegate, latency, and null downstream task metrics"
+    },
+    {
+      "id": "stocktake-models",
+      "prompt": "Run /workshop-stocktake to refresh the local Codex model inventory.",
+      "fixture": "authenticated-codex-model-catalog",
+      "expect": {
+        "skill_invoked": ["workshop-stocktake"],
+        "skill_not_invoked": ["workshop-setup"]
+      },
+      "pass_condition": "Uses the local Codex model catalog, records only observed fields with explicit unknowns, and does not select or rank models.",
+      "trace": "Codex discovery source, observed model fields, changed catalog state, and unknown metadata"
     }
   ]
 }
