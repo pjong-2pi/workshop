@@ -26,6 +26,31 @@ function Invoke-CodexRequest([System.Diagnostics.Process] $Process, [int] $Id, [
     throw "Codex closed before responding to $Method."
 }
 
+function Send-CodexNotification([System.Diagnostics.Process] $Process, [string] $Method, [object] $Params) {
+    $Process.StandardInput.WriteLine((@{ method = $Method; params = $Params } | ConvertTo-Json -Compress -Depth 8))
+}
+
+function Get-Property([object] $Object, [string] $Name) {
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    $property.Value
+}
+
+function Assert-ModelPage([object] $Page) {
+    if ($null -eq $Page -or $null -eq $Page.PSObject.Properties['data'] -or
+        $Page.data -is [string] -or $Page.data -isnot [System.Collections.IEnumerable]) {
+        throw 'Codex model/list returned an invalid data page.'
+    }
+    if ($null -ne $Page.PSObject.Properties['nextCursor'] -and $null -ne $Page.nextCursor -and $Page.nextCursor -isnot [string]) {
+        throw 'Codex model/list returned an invalid pagination cursor.'
+    }
+    foreach ($model in @($Page.data)) {
+        if ($null -eq $model -or $null -eq $model.PSObject.Properties['id'] -or [string]::IsNullOrWhiteSpace([string] $model.id)) {
+            throw 'Codex model/list returned a model without an id.'
+        }
+    }
+}
+
 function Get-CodexModels([string] $Command) {
     $start = [System.Diagnostics.ProcessStartInfo]::new()
     $start.FileName = $Command
@@ -39,12 +64,16 @@ function Get-CodexModels([string] $Command) {
     if (-not $process.Start()) { throw 'Could not start Codex app-server.' }
     try {
         Invoke-CodexRequest $process 1 'initialize' @{ clientInfo = @{ name = 'workshop-stocktake'; version = '1' } } | Out-Null
+        Send-CodexNotification $process 'initialized' @{}
         $models = @()
         $cursor = $null
+        $seenCursors = [System.Collections.Generic.HashSet[string]]::new()
         do {
             $page = Invoke-CodexRequest $process 2 'model/list' @{ cursor = $cursor; includeHidden = $false; limit = 100 }
+            Assert-ModelPage $page
             $models += @($page.data)
-            $cursor = $page.nextCursor
+            $cursor = Get-Property $page 'nextCursor'
+            if (-not [string]::IsNullOrWhiteSpace($cursor) -and -not $seenCursors.Add($cursor)) { throw 'Codex model/list repeated a pagination cursor.' }
         } while (-not [string]::IsNullOrWhiteSpace($cursor))
         return $models
     } finally {
@@ -61,11 +90,20 @@ $models = Get-CodexModels $CodexCommand | Sort-Object { $_.id }
 
 $rows = foreach ($model in $models) {
     $capabilities = @()
+    if (Get-Property $model 'displayName') { $capabilities += "name: $(Get-Property $model 'displayName')" }
+    if (Get-Property $model 'description') { $capabilities += "description: $(Get-Property $model 'description')" }
     if ($model.inputModalities) { $capabilities += "input: $($model.inputModalities -join ', ')" }
+    if (Get-Property $model 'defaultReasoningEffort') { $capabilities += "default reasoning: $(Get-Property $model 'defaultReasoningEffort')" }
     if ($model.supportedReasoningEfforts) { $capabilities += "reasoning: $(($model.supportedReasoningEfforts | ForEach-Object reasoningEffort) -join ', ')" }
+    if (Get-Property $model 'defaultServiceTier') { $capabilities += "default tier: $(Get-Property $model 'defaultServiceTier')" }
     if ($null -ne $model.multiAgentVersion) { $capabilities += "multi-agent: $($model.multiAgentVersion)" }
     if ($model.serviceTiers) { $capabilities += "tiers: $(($model.serviceTiers | ForEach-Object id) -join ', ')" }
-    "| $(ConvertTo-Cell $model.id) | OpenAI | available to current Codex account | unknown | unknown | $(ConvertTo-Cell ($capabilities -join '; ')) | Codex app-server `model/list` |"
+    if (Get-Property $model 'modelSpecialty') { $capabilities += "specialty: $(Get-Property $model 'modelSpecialty')" }
+    if (Get-Property $model 'availableAccessPrograms') { $capabilities += "access: $((Get-Property $model 'availableAccessPrograms' | ConvertTo-Json -Compress))" }
+    if ($true -eq (Get-Property $model 'isDefault')) { $capabilities += 'default' }
+    if ($true -eq (Get-Property $model 'hidden')) { $capabilities += 'hidden' }
+    $provider = ConvertTo-Cell (Get-Property $model 'provider')
+    "| $(ConvertTo-Cell $model.id) | $provider | available to current Codex account | $(ConvertTo-Cell (Get-Property $model 'pricing')) | $(ConvertTo-Cell (Get-Property $model 'contextWindow')) | $(ConvertTo-Cell ($capabilities -join '; ')) | Codex app-server `model/list` |"
 }
 if (-not $rows) { $rows = '| none returned | unknown | none returned by current Codex account | unknown | unknown | unknown | Codex app-server `model/list` |' }
 

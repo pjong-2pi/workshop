@@ -152,7 +152,7 @@ foreach ($contract in @('Codex''s local app-server `model/list`', 'unknown', 'ne
     Assert-CommandContract $stocktake $contract 'workshop-stocktake'
 }
 $stocktakeScript = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-stocktake/scripts/update-model-catalog.ps1') -Raw
-foreach ($contract in @("'model/list'", 'includeHidden = $false', 'available to current Codex account', 'Last checked (UTC)', 'Unchanged model catalog')) {
+foreach ($contract in @("'model/list'", "'initialized'", 'Assert-ModelPage', 'includeHidden = $false', 'available to current Codex account', 'Last checked (UTC)', 'Unchanged model catalog')) {
     Assert-CommandContract $stocktakeScript $contract 'workshop-stocktake script'
 }
 
