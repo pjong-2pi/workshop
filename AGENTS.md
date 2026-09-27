@@ -23,6 +23,11 @@ real workflow needs them.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
   authorization required by the target repository and the user.
+- A request authorizing repository changes also authorizes committing its scoped
+  changes, pushing its dedicated branch, and creating a PR after required
+  verification and review, unless the user sets an earlier stopping gate or says
+  not to create a PR. Read-only work does not authorize mutation or a PR; PR
+  creation does not authorize merge or branch deletion.
 - Keep machine paths, secrets, cloned projects, worktrees, and raw eval runs out
   of Git. Keep durable skills, profiles, eval definitions, and project indexes in
   Git.
