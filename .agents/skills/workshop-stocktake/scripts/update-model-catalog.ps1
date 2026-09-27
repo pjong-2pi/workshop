@@ -41,7 +41,10 @@ function Assert-ModelPage([object] $Page) {
         $Page.data -is [string] -or $Page.data -isnot [System.Collections.IEnumerable]) {
         throw 'Codex model/list returned an invalid data page.'
     }
-    if ($null -ne $Page.PSObject.Properties['nextCursor'] -and $null -ne $Page.nextCursor -and $Page.nextCursor -isnot [string]) {
+    if ($null -eq $Page.PSObject.Properties['nextCursor']) {
+        throw 'Codex model/list omitted its pagination cursor.'
+    }
+    if ($null -ne $Page.nextCursor -and $Page.nextCursor -isnot [string]) {
         throw 'Codex model/list returned an invalid pagination cursor.'
     }
     foreach ($model in @($Page.data)) {

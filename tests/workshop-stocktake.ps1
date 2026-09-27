@@ -19,7 +19,8 @@ if ($initialized.method -ne 'initialized') { throw 'initialized notification req
 $first = $input | Select-Object -First 1 | ConvertFrom-Json
 if ($first.method -ne 'model/list') { throw 'model/list required after initialized' }
 if ($env:STOCKTAKE_TEST_MODE -eq 'malformed') { '{"id":2,"result":{"nextCursor":null}}'; exit 0 }
-'{"id":2,"result":{"data":[{"id":"model-b","inputModalities":["text"],"supportedReasoningEfforts":[{"reasoningEffort":"low"}]}],"nextCursor":"second"}}'
+if ($env:STOCKTAKE_TEST_MODE -eq 'missing-cursor') { '{"id":2,"result":{"data":[{"id":"model-c"}]}}'; exit 0 }
+'{"id":2,"result":{"data":[{"id":"model-b","inputModalities":["text"],"supportedReasoningEfforts":[{"reasoningEffort":"low"}]},{"id":"model-c"}],"nextCursor":"second"}}'
 $second = $input | Select-Object -First 1 | ConvertFrom-Json
 if ($second.params.cursor -ne 'second') { throw 'pagination cursor required' }
 '{"id":2,"result":{"data":[{"id":"model-a","provider":"observed provider","pricing":"observed pricing","contextWindow":"observed context","displayName":"Observed name","description":"Observed description","defaultReasoningEffort":"medium","inputModalities":["text","image"],"supportedReasoningEfforts":[{"reasoningEffort":"medium"}],"multiAgentVersion":"v1","defaultServiceTier":"priority","modelSpecialty":"coding","isDefault":true}],"nextCursor":null}}'
@@ -29,15 +30,18 @@ if ($second.params.cursor -ne 'second') { throw 'pagination cursor required' }
     if ($LASTEXITCODE -ne 0) { throw 'Stocktake must complete the required handshake and pagination.' }
     $first = Get-Content -LiteralPath $catalog -Raw
     if ($first -notmatch '\| model-a \| observed provider \| available to current Codex account \| observed pricing \| observed context \| name: Observed name; description: Observed description; input: text, image; default reasoning: medium; reasoning: medium; default tier: priority; multi-agent: v1; specialty: coding; default \|') { throw 'Stocktake must retain observed model metadata and explicit source fields.' }
+    if ($first -notmatch '\| model-c \| unknown \| available to current Codex account \| unknown \| unknown \| unknown \|') { throw 'Stocktake must render absent model metadata as unknown.' }
     if ($first.IndexOf('model-a') -gt $first.IndexOf('model-b')) { throw 'Stocktake must sort model rows deterministically.' }
     & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd')
     if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Unchanged inventory must not rewrite its timestamp.' }
     $oldMode = $env:STOCKTAKE_TEST_MODE
     try {
-        $env:STOCKTAKE_TEST_MODE = 'malformed'
-        & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd') 2>$null
-        if ($LASTEXITCODE -eq 0) { throw 'Malformed model/list data must fail discovery.' }
-        if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Failed discovery must preserve the prior catalog byte-for-byte.' }
+        foreach ($mode in @('malformed', 'missing-cursor')) {
+            $env:STOCKTAKE_TEST_MODE = $mode
+            & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd') 2>$null
+            if ($LASTEXITCODE -eq 0) { throw "$mode model/list data must fail discovery." }
+            if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Failed discovery must preserve the prior catalog byte-for-byte.' }
+        }
     } finally { $env:STOCKTAKE_TEST_MODE = $oldMode }
 } finally { Remove-Item -LiteralPath $fixture -Recurse -Force }
 
