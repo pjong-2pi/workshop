@@ -119,7 +119,9 @@ scoped changes, pushing the dedicated branch, and creating a PR after required
 verification and review. Do not ask separately unless the user sets an earlier
 stopping gate or says not to create a PR. Read-only answers and investigations do
 not authorize mutation or a PR. This authorization never includes merge or branch
-deletion; stop before either unless separately authorized.
+deletion; stop before either unless separately authorized. Treat a user reply of
+`LGTM` to an exact PR handoff as explicit authorization to merge that PR and run
+verified post-merge bench cleanup; it grants no broader authority.
 
 Give every reviewer a separate read-only workspace. Use the target's applicable
 review profile when present, otherwise Workshop's `inspector` or
