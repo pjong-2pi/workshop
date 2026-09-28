@@ -23,6 +23,7 @@ the repository-root script (never a skill-local `scripts` path):
 . (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
 $JevDecision = Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot
 ```
+
 JEV is advisory only:
 use its minimal `skill`, `agent`, `model`, and `delegate` decision only when its
 source is `jev`; otherwise use existing Foreman judgment. Foreman remains
@@ -47,6 +48,34 @@ When both router counters are observed, it adds them to the projection; otherwis
 the projected total remains null. Never estimate metrics, use prices, or include
 request text, credentials, code, or private data.
 
+## Orchestration hiccups
+
+At the user-facing gate, identify only observed tool/CLI drift, avoidable retries,
+coordination failures, or permission/instruction ambiguity. Exclude product defects
+and normal review findings. For each observed hiccup, append one sanitized row to
+the ignored local tracker, then mention it in the required handoff (or state that
+none were observed). `stage`, `category`, `sanitized_symptom`, and
+`resolution_status` must contain no request text, code, credentials, secrets,
+private/customer data, or raw command transcripts. Include `routing_id` only when
+available. Use this inline PowerShell; do not create a tracker script or skill:
+
+```powershell
+foreach ($Hiccup in $ObservedHiccups) {
+    $HiccupRow = [ordered]@{
+        timestamp_utc = (Get-Date).ToUniversalTime().ToString('o')
+        stage = $Hiccup.Stage
+        category = $Hiccup.Category
+        sanitized_symptom = $Hiccup.SanitizedSymptom
+        resolution_status = $Hiccup.ResolutionStatus
+    }
+    if ($JevDecision) { $HiccupRow.routing_id = $JevDecision.routing_id }
+    $HiccupRow | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $WorkshopRoot '.local/orchestration-hiccups.jsonl')
+}
+```
+
+Promote repeated, actionable patterns to `WORKFLOWS.md` only when Workshop edits
+are authorized; otherwise report the candidate in the handoff.
+
 ## Select and prepare the target
 
 Resolve the exact target repository from the request or ask when ambiguity risks
@@ -65,13 +94,18 @@ CLI help only when a command is rejected or the installed version has drifted.
 ## Dispatch
 
 Create one dedicated Herdr workspace and Git worktree per worker from the refreshed
-base, then record it as the owning workspace with its returned pane identifiers.
+base. Parse and validate Herdr's returned workspace and root pane before using it;
+stop on malformed or inconsistent state. Then record it as the owning workspace
+with the returned pane.
 Auxiliary workspaces are recorded CWD-sharing workspace IDs excluding the owning
 workspace ID, even though the owner is also a worker workspace:
 
 ```powershell
-herdr worktree create --workspace $Workspace --cwd $Repository --branch $Branch --base $Base --path $WorktreePath --label $Label --no-focus --trust-repository
-herdr worktree list --workspace $Workspace --cwd $Repository
+$created = herdr worktree create --cwd $Repository --branch $Branch --base $Base --path $WorktreePath --label $Label --no-focus --trust-repository | ConvertFrom-Json -ErrorAction Stop
+if ($created.id -ne 'cli:worktree:create' -or $null -eq $created.result -or $null -eq $created.result.workspace -or $null -eq $created.result.root_pane -or [string]::IsNullOrWhiteSpace($created.result.workspace.workspace_id) -or [string]::IsNullOrWhiteSpace($created.result.root_pane.workspace_id) -or [string]::IsNullOrWhiteSpace($created.result.root_pane.pane_id) -or $created.result.root_pane.workspace_id -cne $created.result.workspace.workspace_id) { throw 'Herdr returned malformed owning workspace state; stop and report.' }
+$Workspace = $created.result.workspace.workspace_id
+$Pane = $created.result.root_pane.pane_id
+herdr worktree list --workspace $Workspace --trust-repository
 ```
 
 When Herdr's normal path is not writable, use an explicit writable `--path` and
@@ -129,6 +163,61 @@ review profile when present, otherwise Workshop's `inspector` or
 Use the Master Inspector only for architecture, concurrency, security, data-loss,
 or other high-risk boundaries. Material fixes require affected checks and focused
 re-review.
+
+## Fit an approved change
+
+After the implementation writer is idle and has supplied an implemented, verified
+change plus independent review evidence, Foreman may dispatch the `fitter` profile
+in an auxiliary CWD-sharing Herdr workspace on the owning worktree. Record that
+auxiliary workspace ID. Supply the exact repository, owning worktree, base, branch,
+approved paths, checks, review evidence, and stopping gate. Fitter reuses
+`github-check-pr` to verify state and `github-create-pr` only when the authorized
+gate includes PR creation; it returns failures or required source edits to the
+original worker. Require the exact PR URL and head SHA. Fitter never edits product code,
+approves its own work, merges, deletes branches, force-pushes, stashes,
+resets, or cleans worktrees. Foreman retains authorization interpretation and the
+user-facing result.
+
+Before dispatching Fitter, inspect active agents. Production Fitter names use the
+`fitter-run-` prefix; reviewers do not. Stop when a non-`done` Fitter has the
+owning worktree as its CWD; otherwise create one auxiliary workspace, assign its
+returned ID to `$FitterWorkspace`, and record it before starting Fitter. Keep the
+claim in Workshop-local runtime state; never write it into the target worktree.
+
+```powershell
+if ($Workspace -notmatch '^[A-Za-z0-9][A-Za-z0-9_-]*$') { throw 'Owning workspace ID is not a safe claim leaf; stop and report.' }
+$FitterClaimParent = Join-Path $WorkshopRoot '.local/fitter-claims'
+if (-not (Test-Path -LiteralPath $FitterClaimParent -PathType Container)) { New-Item -ItemType Directory -Path $FitterClaimParent -ErrorAction Stop | Out-Null }
+$FitterClaimParent = (Resolve-Path -LiteralPath $FitterClaimParent -ErrorAction Stop).Path
+$FitterClaim = [IO.Path]::GetFullPath((Join-Path $FitterClaimParent $Workspace))
+if ((Split-Path -Parent $FitterClaim) -cne $FitterClaimParent) { throw 'Fitter claim escapes its parent; stop and report.' }
+try { New-Item -ItemType Directory -Path $FitterClaim -ErrorAction Stop | Out-Null } catch { throw 'A Fitter claim already exists or is stale; stop and report.' }
+$agents = herdr agent list | ConvertFrom-Json -ErrorAction Stop
+if ($agents.id -ne 'cli:agent:list' -or $null -eq $agents.result.agents) { throw 'Herdr returned malformed agent state; stop and report.' }
+foreach ($agent in $agents.result.agents) {
+    if ([string]::IsNullOrWhiteSpace($agent.name) -or [string]::IsNullOrWhiteSpace($agent.cwd) -or [string]::IsNullOrWhiteSpace($agent.workspace_id) -or [string]::IsNullOrWhiteSpace($agent.agent_status)) { throw 'Herdr returned malformed agent record; stop and report.' }
+}
+if (@($agents.result.agents | Where-Object { $_.name -clike 'fitter-run-*' -and $_.cwd -ieq $OwningWorktree -and $_.agent_status -cne 'done' }).Count) { throw 'An active Fitter already shares the owning worktree; stop and report.' }
+$auxiliary = herdr workspace create --cwd $OwningWorktree --label fitter --no-focus | ConvertFrom-Json -ErrorAction Stop
+if ($auxiliary.id -ne 'cli:workspace:create' -or $null -eq $auxiliary.result.workspace -or $null -eq $auxiliary.result.root_pane -or [string]::IsNullOrWhiteSpace($auxiliary.result.workspace.workspace_id) -or [string]::IsNullOrWhiteSpace($auxiliary.result.root_pane.workspace_id) -or [string]::IsNullOrWhiteSpace($auxiliary.result.root_pane.pane_id) -or $auxiliary.result.root_pane.workspace_id -cne $auxiliary.result.workspace.workspace_id) { throw 'Herdr returned malformed Fitter workspace state; stop and report.' }
+$FitterWorkspace = $auxiliary.result.workspace.workspace_id
+$FitterPane = $auxiliary.result.root_pane.pane_id
+$FitterAgent = "fitter-run-$FitterWorkspace"
+```
+
+Hold `$FitterClaim` for the entire Fitter lifecycle. Never auto-delete an existing
+or stale claim. Release it only after `herdr agent list` observes exactly one
+`$FitterAgent` in a terminal `done`, `blocked`, or `error` state:
+
+```powershell
+$terminal = herdr agent list | ConvertFrom-Json -ErrorAction Stop
+$fitter = @($terminal.result.agents | Where-Object { $_.name -ceq $FitterAgent })
+if ($terminal.id -ne 'cli:agent:list' -or $fitter.Count -ne 1 -or $fitter[0].agent_status -notin @('done', 'blocked', 'error')) { throw 'Fitter is not observed terminal; retain its claim and stop.' }
+$FitterClaimParent = (Resolve-Path -LiteralPath $FitterClaimParent -ErrorAction Stop).Path
+$FitterClaim = (Resolve-Path -LiteralPath $FitterClaim -ErrorAction Stop).Path
+if ((Split-Path -Parent $FitterClaim) -cne $FitterClaimParent -or @(Get-ChildItem -LiteralPath $FitterClaim -Force).Count -ne 0) { throw 'Fitter claim is unsafe or not empty; retain it and stop.' }
+Remove-Item -LiteralPath $FitterClaim
+```
 
 ## Finish
 

@@ -50,6 +50,14 @@ explicit observed baseline total or JEV-route token projection. The latter inclu
 observed JEV input/output tokens; unavailable totals remain null. It uses no prices
 or token estimator.
 
+At the user-facing gate, Foreman records observed orchestration hiccups (CLI/tool
+drift, avoidable retries, coordination failures, or permission/instruction
+ambiguity) as sanitized rows in ignored `.local/orchestration-hiccups.jsonl` and
+mentions them in its handoff. Product defects and normal review findings are excluded.
+
+Tracked `.codex/config.toml` enables network access for new trusted Workshop
+sessions; managed policy may override it.
+
 ## Evaluation model
 
 Workshop uses three layers: deterministic disposable-fixture tests; behavioral
@@ -71,7 +79,7 @@ Full workflow evals -> later
 - `.agents/skills/workshop-clear-bench/` — guarded cleanup of completed Herdr workspaces
 - `.agents/skills/workshop-stocktake/` — on-demand local Codex model inventory
 - `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
-- `.codex/agents/` — generic worker and reviewer profiles
+- `.codex/agents/` — generic worker, reviewer, and Fitter profiles
 - `evals/` — versioned behavioral evaluation definitions and model
 - `scripts/` — bootstrap and environment checks
 - `catalog/models.md` — versioned observed model inventory for future routing input
@@ -85,5 +93,6 @@ tracked rather than being treated as runtime state.
 
 ## Current milestone
 
-Establish deterministic setup coverage and behavioral skill-eval definitions;
-full disposable Foreman runs remain a later evaluation layer.
+Establish deterministic setup coverage, behavioral skill-eval definitions, and a
+minimal Fitter PR gate; full disposable Foreman runs remain a later evaluation
+layer.
