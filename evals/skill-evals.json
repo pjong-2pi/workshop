@@ -117,6 +117,61 @@
       "trace": "fallback reason, Foreman final route/delegation/model/outcome, observed baseline total, and null JEV projection when router counters are unavailable"
     },
     {
+      "id": "fitter-pr",
+      "prompt": "Advance the supplied reviewed, verified change to its authorized pull-request gate.",
+      "fixture": "reviewed-owning-worktree",
+      "expect": {
+        "skill_invoked": ["workshop-foreman", "github-check-pr", "github-create-pr"],
+        "skill_not_invoked": ["github-merge-pr", "workshop-clear-bench"]
+      },
+      "pass_condition": "After the writer is idle, one Fitter reuses the owning worktree through an auxiliary CWD-sharing workspace, verifies the reviewed change, and creates an open PR with the exact PR URL and head SHA; no merge or cleanup occurs.",
+      "trace": "Fitter profile, owning worktree and auxiliary workspace IDs, writer-idle state, approved paths, checks, review evidence, PR URL, head SHA, and no merge/cleanup actions"
+    },
+    {
+      "id": "active-fitter",
+      "prompt": "Advance a reviewed change, but a non-done fitter-run agent and a done fitter-agent-reviewer share the supplied owning worktree.",
+      "fixture": "active-fitter-owning-worktree",
+      "expect": {
+        "skill_invoked": ["workshop-foreman"],
+        "skill_not_invoked": ["github-create-pr"]
+      },
+      "pass_condition": "Discovers the non-done fitter-run agent sharing the owning worktree, ignores the done fitter-agent-reviewer, stops before dispatch, and creates no auxiliary workspace or PR.",
+      "trace": "owning worktree, agent name/CWD/workspace ID/status, stop decision, and absence of auxiliary workspace or PR actions"
+    },
+    {
+      "id": "concurrent-fitter",
+      "prompt": "Dispatch two Fitters for the same owning worktree concurrently.",
+      "fixture": "concurrent-fitter-owning-worktree",
+      "expect": {
+        "skill_invoked": ["workshop-foreman"],
+        "skill_not_invoked": ["github-create-pr"]
+      },
+      "pass_condition": "The first dispatch acquires the atomic claim for its owner workspace under Workshop .local; the concurrent dispatch stops on the existing claim, creates no auxiliary workspace, opens no PR, and makes no target path/change.",
+      "trace": "owner workspace, Workshop-local claim path, exclusive create result, concurrent stop decision, and absence of a second auxiliary workspace, PR, or target change"
+    },
+    {
+      "id": "traversal-fitter-claim",
+      "prompt": "Dispatch Fitter with a traversal-like owning workspace ID.",
+      "fixture": "traversal-workspace-id",
+      "expect": {
+        "skill_invoked": ["workshop-foreman"],
+        "skill_not_invoked": ["github-create-pr"]
+      },
+      "pass_condition": "Rejects the traversal workspace ID before claim creation because it is not a safe leaf, stops, creates no claim, and makes no target path/change.",
+      "trace": "workspace ID validation, resolved claim parent/path checks, stop decision, and absence of claim or target changes"
+    },
+    {
+      "id": "foreman-hiccup",
+      "prompt": "A supplied Herdr command has CLI drift; continue the authorized workflow and report the orchestration hiccup.",
+      "fixture": "cli-drift-managed-repository",
+      "expect": {
+        "skill_invoked": ["workshop-foreman"],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Records the tool/CLI drift as one sanitized JSONL hiccup row, correlates its routing ID when available, mentions it in the handoff, excludes product defects and normal review findings, and promotes a repeated actionable pattern to WORKFLOWS.md only when Workshop edits are authorized.",
+      "trace": "timestamp_utc, stage, category, sanitized symptom, resolution/status, routing ID when available, handoff, and any authorized workflow promotion"
+    },
+    {
       "id": "stocktake-models",
       "prompt": "Run /workshop-stocktake to refresh the local Codex model inventory.",
       "fixture": "authenticated-codex-model-catalog",

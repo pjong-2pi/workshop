@@ -16,6 +16,8 @@ $required = @(
     '.codex/agents/master-craftsman.toml',
     '.codex/agents/inspector.toml',
     '.codex/agents/master-inspector.toml',
+    '.codex/agents/fitter.toml',
+    '.codex/config.toml',
     'scripts/check-environment.ps1', 'scripts/setup.ps1', 'scripts/jev-routing.ps1', 'tests/run.ps1', 'tests/jev-routing.ps1',
     'evals/workshop-foreman.md', 'evals/skill-evals.json'
 )
@@ -29,7 +31,7 @@ foreach ($name in @('workshop-foreman', 'github-create-pr', 'github-check-pr', '
     }
 }
 
-foreach ($profile in @('master-craftsman.toml', 'inspector.toml', 'master-inspector.toml')) {
+foreach ($profile in @('master-craftsman.toml', 'inspector.toml', 'master-inspector.toml', 'fitter.toml')) {
     $content = Get-Content -LiteralPath (Join-Path $root ".codex/agents/$profile") -Raw
     foreach ($field in @('name', 'description', 'sandbox_mode', 'model', 'model_reasoning_effort', 'developer_instructions')) {
         if ($content -notmatch "(?m)^$field\s*=") { throw "$profile is missing $field." }
@@ -41,7 +43,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'stocktake-models')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'fitter-pr', 'active-fitter', 'concurrent-fitter', 'traversal-fitter-claim', 'foreman-hiccup', 'stocktake-models')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -103,6 +105,23 @@ $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-fo
 foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'record it as the owning workspace', 'Auxiliary workspaces are recorded CWD-sharing workspace IDs excluding the owning', 'After verified GitHub merge, pass the exact', 'The gate re-verifies the merge, re-discovers and closes only current auxiliary', '-GitHubRepository "$GitHubRepository" -PullRequest "$PullRequest" -Base "$Base"', 'A user request authorizing repository changes also authorizes committing the', 'Do not ask separately unless the user sets an earlier', 'Read-only answers and investigations do', 'This authorization never includes merge or branch', 'workshop-clear-bench/scripts/remove-workspace.ps1', 'Verify `HERDR_ENV=1`.')) {
     Assert-CommandContract $foreman $command 'workshop-foreman'
 }
+$networkConfig = (Get-Content -LiteralPath (Join-Path $root '.codex/config.toml') -Raw) -replace "`r`n", "`n"
+if ($networkConfig -ne "sandbox_mode = `"workspace-write`"`n`n[sandbox_workspace_write]`nnetwork_access = true`n" -or $networkConfig -match 'danger-full-access|approval_policy') { throw 'Workshop network config must grant only workspace-write network access.' }
+$worktreeCreate = @($foreman -split "`r?`n" | Where-Object { $_.Contains('herdr worktree create ') })
+if ($worktreeCreate.Count -ne 1 -or $worktreeCreate[0] -notmatch '--cwd \$Repository' -or $worktreeCreate[0] -match '--workspace') { throw 'workshop-foreman must create worktrees with only the CWD selector.' }
+foreach ($contract in @('ConvertFrom-Json -ErrorAction Stop', "`$created.id -ne 'cli:worktree:create'", 'result.workspace.workspace_id', 'result.root_pane.pane_id', 'result.root_pane.workspace_id -cne $created.result.workspace.workspace_id', '$Workspace = $created.result.workspace.workspace_id', '$Pane = $created.result.root_pane.pane_id')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman owning workspace capture'
+}
+foreach ($contract in @('orchestration-hiccups.jsonl', 'ConvertTo-Json -Compress', 'Add-Content -LiteralPath', 'timestamp_utc', 'routing_id', 'sanitized_symptom', 'resolution_status', 'tool/CLI drift', 'avoidable retries', 'coordination failures', 'permission/instruction ambiguity', 'Exclude product defects', 'normal review findings', 'mention it in the required handoff', 'Promote repeated, actionable patterns')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman hiccup tracker'
+}
+foreach ($contract in @('After the implementation writer is idle', 'auxiliary CWD-sharing Herdr workspace on the owning worktree', 'github-check-pr', 'github-create-pr', 'exact PR URL and head SHA', 'Fitter never edits product code', 'Foreman retains authorization interpretation')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman fitter lifecycle'
+}
+$fitter = Get-Content -LiteralPath (Join-Path $root '.codex/agents/fitter.toml') -Raw
+foreach ($contract in @('auxiliary CWD-sharing Herdr workspace', 'owning implementation writer is idle', 'github-check-pr', 'github-create-pr', 'exact PR URL and head SHA', 'Do not edit product code', 'Never merge, delete branches, force-push, stash, reset, or clean worktrees', 'Foreman retains authorization interpretation')) {
+    Assert-CommandContract $fitter $contract 'fitter profile'
+}
 foreach ($id in @('jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')) {
     $routing = ($definitions.evaluations | Where-Object id -eq $id).routing
     if ($null -eq $routing -or @($routing.PSObject.Properties.Name | Sort-Object) -join ',' -ne 'agent,delegate,model,skill') { throw "Skill eval '$id' must define exactly the routing fields." }
@@ -126,10 +145,42 @@ foreach ($contract in @("`$agents = @('master-craftsman', 'inspector', 'master-i
     Assert-CommandContract $jev $contract 'jev-routing'
 }
 if ($jev -match '\$profiles\[\$answers\.agent\.choice\]\s*-ne\s*\$answers\.model\.choice') { throw 'JEV agent and model choices must remain independent.' }
+if ($jev -match "'fitter'") { throw 'JEV must not route to Fitter.' }
 $substantiveRouting = ($definitions.evaluations | Where-Object id -eq 'jev-substantive-task').routing
 if ($substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover the Master Craftsman/Luna override.' }
 $cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
 if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
+$fitterEvaluation = $definitions.evaluations | Where-Object id -eq 'fitter-pr'
+if ($fitterEvaluation.expect.skill_invoked -notcontains 'workshop-foreman' -or $fitterEvaluation.expect.skill_invoked -notcontains 'github-check-pr' -or $fitterEvaluation.expect.skill_invoked -notcontains 'github-create-pr') { throw "Skill eval 'fitter-pr' must use Foreman and the PR skills." }
+foreach ($contract in @('Fitter', 'owning worktree', 'writer is idle', 'exact PR URL', 'head SHA', 'no merge', 'cleanup')) {
+    Assert-CommandContract $fitterEvaluation.pass_condition $contract 'fitter-pr eval'
+}
+$fitterConflict = $definitions.evaluations | Where-Object id -eq 'active-fitter'
+foreach ($contract in @('non-done fitter-run', 'owning worktree', 'done fitter-agent-reviewer', 'stop', 'no auxiliary workspace')) {
+    Assert-CommandContract $fitterConflict.pass_condition $contract 'active-fitter eval'
+}
+foreach ($contract in @("`$agents.id -ne 'cli:agent:list'", 'agent_status', "'fitter-run-*'", '$_.cwd -ieq $OwningWorktree', '$_.agent_status -cne', 'active Fitter already shares the owning worktree', 'herdr workspace create --cwd $OwningWorktree', '$FitterWorkspace = $auxiliary.result.workspace.workspace_id', '$FitterPane = $auxiliary.result.root_pane.pane_id', '$FitterAgent = "fitter-run-$FitterWorkspace"')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman Fitter exclusivity'
+}
+$claimCreate = @($foreman -split "`r?`n" | Where-Object { $_.Contains('New-Item -ItemType Directory -Path $FitterClaim -ErrorAction Stop') })
+if ($claimCreate.Count -ne 1 -or $claimCreate[0] -match '-Force') { throw 'workshop-foreman must atomically create its Fitter claim without force.' }
+foreach ($contract in @("`$Workspace -notmatch '^[A-Za-z0-9][A-Za-z0-9_-]*$'", "`$FitterClaimParent = Join-Path `$WorkshopRoot '.local/fitter-claims'", '[IO.Path]::GetFullPath', '(Split-Path -Parent $FitterClaim) -cne $FitterClaimParent', 'Fitter claim escapes its parent; stop and report.', 'never write it into the target worktree', 'A Fitter claim already exists or is stale; stop and report.', 'Fitter is not observed terminal; retain its claim and stop.', "agent_status -notin @('done', 'blocked', 'error')", 'Get-ChildItem -LiteralPath $FitterClaim -Force', 'Fitter claim is unsafe or not empty; retain it and stop.', 'Remove-Item -LiteralPath $FitterClaim')) {
+    Assert-CommandContract $foreman $contract 'workshop-foreman Fitter claim'
+}
+if ($foreman -match 'Remove-Item -LiteralPath \$FitterClaim -Recurse') { throw 'workshop-foreman must remove only an empty Fitter claim.' }
+if (@($foreman -split "`r?`n" | Where-Object { $_.Contains('$FitterClaim') -and $_.Contains('$OwningWorktree') }).Count -ne 0) { throw 'workshop-foreman must not put Fitter claims in the target worktree.' }
+$concurrentFitter = $definitions.evaluations | Where-Object id -eq 'concurrent-fitter'
+foreach ($contract in @('Workshop .local', 'owner workspace', 'atomic claim', 'concurrent', 'stop', 'no auxiliary workspace', 'no PR', 'no target path/change')) {
+    Assert-CommandContract $concurrentFitter.pass_condition $contract 'concurrent-fitter eval'
+}
+$traversalClaim = $definitions.evaluations | Where-Object id -eq 'traversal-fitter-claim'
+foreach ($contract in @('traversal', 'safe leaf', 'stop', 'no claim', 'no target path/change')) {
+    Assert-CommandContract $traversalClaim.pass_condition $contract 'traversal-fitter-claim eval'
+}
+$hiccupEvaluation = $definitions.evaluations | Where-Object id -eq 'foreman-hiccup'
+foreach ($contract in @('tool/CLI drift', 'sanitized JSONL', 'routing ID', 'handoff', 'product defects', 'normal review findings', 'WORKFLOWS.md')) {
+    Assert-CommandContract $hiccupEvaluation.pass_condition $contract 'foreman-hiccup eval'
+}
 
 $cleanup = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1') -Raw
 foreach ($contract in @('herdr workspace get $Workspace', "`$response.id -ne 'cli:workspace:get'", 'workspace_id -cne $Workspace', 'worktree.repo_root', 'herdr worktree list --cwd $Repository --trust-repository', 'ConvertFrom-Json -ErrorAction Stop', "`$response.id -ne 'cli:worktree:list'", '$response.result.type -ne', '$response.result.worktrees', 'open_workspace_id -ceq $Workspace', 'function Assert-CleanWorktree', 'git -C $Path status --porcelain', 'function Assert-MergedPullRequest', 'Push-Location -LiteralPath $Path', 'finally { Pop-Location }', 'gh repo view --json nameWithOwner', '$githubRepositoryRecord.nameWithOwner -ine $GitHubRepository', 'gh pr view $PullRequest --repo $GitHubRepository --json number,state,baseRefName,headRefOid', "`$pr.number -ne [long]`$PullRequest", "`$pr.state -cne 'MERGED'", '$pr.baseRefName -cne $Base', '$pr.headRefOid -cne $head', 'function Close-CwdSharingWorkspaces', 'herdr workspace list', 'herdr pane list --workspace $candidate', 'Where-Object { $_ -cne $Workspace }', 'herdr workspace close $candidate', 'Assert-MergedPullRequest $worktreePath', 'herdr worktree remove --workspace $Workspace --trust-repository', 'GitHub repository, pull request, and base for a verified merge, or -DiscardAuthorization.', 'Release current CWD-sharing workspace locks, then recheck immediately before removal.')) {

@@ -28,6 +28,10 @@ skill.
 | Material finding | The worker fixes it, affected checks run, and focused re-review occurs. | Code |
 | Missing Herdr resource | Work stops rather than substituting another resource. | Code |
 | Change authorization | Scoped repository changes authorize commit, dedicated-branch push, and PR creation after checks/review; read-only work, merge, and branch deletion remain separate. | Code |
+| Orchestration hiccup | Foreman records each eligible sanitized hiccup at the user-facing gate and reports it; product defects and routine review findings stay out. | Code |
+| Fitter PR gate | Once the writer is idle, one Fitter shares the owning worktree, rechecks reviewed evidence, and returns an open PR URL/head SHA without merge or cleanup. | Code |
+| Active Fitter | A non-done production Fitter already sharing the owning worktree stops a second dispatch; a done reviewer does not match. | Code |
+| Concurrent Fitter | An atomic owning-worktree claim permits one dispatch and stops a concurrent second dispatch. | Code |
 | Cleanup | Exact merged PR/base/head evidence permits the gate to rediscover and close CWD-sharing auxiliaries before direct removal through the still-live owner; unintegrated resources need explicit discard authorization. | Code |
 
 ## Evidence and release gate
