@@ -86,13 +86,13 @@ foreach ($command in @('gh pr view "$PR" --repo "$REPO" --json', 'gh pr diff "$P
 }
 
 $merge = Get-Content -LiteralPath (Join-Path $root '.agents/skills/github-merge-pr/SKILL.md') -Raw
-foreach ($contract in @('gh repo view "$REPO" --json', 'Squash when neither specifies a method and the repository enables squash.', 'headRefOid', 'Never add `--admin`, `--auto`, or `--delete-branch`')) {
+foreach ($contract in @('gh repo view "$REPO" --json', 'nameWithOwner', 'GITHUB_REPOSITORY', 'Squash when neither specifies a method and the repository enables squash.', 'headRefOid', 'Never add `--admin`, `--auto`, or `--delete-branch`')) {
     Assert-CommandContract $merge $contract 'github-merge-pr'
 }
 $mergeCommands = @($merge -split "\r?\n" | Where-Object { $_.TrimStart().StartsWith('gh pr merge ') })
 if ($mergeCommands.Count -ne 3) { throw "github-merge-pr must have exactly three merge commands; found $($mergeCommands.Count)." }
 foreach ($command in $mergeCommands) {
-    Assert-CommandContract $command '--repo "$REPO"' 'github-merge-pr'
+    Assert-CommandContract $command '--repo "$GITHUB_REPOSITORY"' 'github-merge-pr'
     Assert-CommandContract $command '--match-head-commit "$SHA"' 'github-merge-pr'
     if ($command -match '(?:^|\s)--(?:admin|auto|delete-branch)(?:\s|$)') { throw 'github-merge-pr contains a prohibited merge flag.' }
 }
@@ -102,7 +102,7 @@ foreach ($contract in @("Join-Path `$root 'projects'", "Join-Path `$root '.local
 }
 
 $foreman = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-foreman/SKILL.md') -Raw
-foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'record it as the owning workspace', 'Auxiliary workspaces are recorded CWD-sharing workspace IDs excluding the owning', 'After verified GitHub merge, pass the exact', 'The gate re-verifies the merge, re-discovers and closes only current auxiliary', '-GitHubRepository "$GitHubRepository" -PullRequest "$PullRequest" -Base "$Base"', 'A user request authorizing repository changes also authorizes committing the', 'Do not ask separately unless the user sets an earlier', 'Read-only answers and investigations do', 'This authorization never includes merge or branch', 'workshop-clear-bench/scripts/remove-workspace.ps1', 'Verify `HERDR_ENV=1`.')) {
+foreach ($command in @('herdr worktree create', 'herdr agent start', 'herdr agent get', 'herdr agent prompt', 'herdr agent read', 'record it as the owning workspace', 'Auxiliary workspaces are recorded CWD-sharing workspace IDs excluding the owning', 'After verified GitHub merge, derive', 'canonical `OWNER/REPO`', 'The gate re-verifies the merge, re-discovers and closes only current auxiliary', '-GitHubRepository "$GitHubRepository" -PullRequest "$PullRequest" -Base "$Base"', 'A user request authorizing repository changes also authorizes committing the', 'Do not ask separately unless the user sets an earlier', 'Read-only answers and investigations do', 'This authorization never includes merge or branch', 'workshop-clear-bench/scripts/remove-workspace.ps1', 'Verify `HERDR_ENV=1`.')) {
     Assert-CommandContract $foreman $command 'workshop-foreman'
 }
 $networkConfig = (Get-Content -LiteralPath (Join-Path $root '.codex/config.toml') -Raw) -replace "`r`n", "`n"
@@ -127,11 +127,11 @@ foreach ($id in @('jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', '
     if ($null -eq $routing -or @($routing.PSObject.Properties.Name | Sort-Object) -join ',' -ne 'agent,delegate,model,skill') { throw "Skill eval '$id' must define exactly the routing fields." }
     if ($id -eq 'jev-fallback') {
         if ($null -ne $routing.skill -or $null -ne $routing.agent -or $null -ne $routing.model -or $null -ne $routing.delegate) { throw "Skill eval '$id' must leave unavailable routing fields null." }
-    } elseif ($routing.skill -isnot [string] -or $routing.agent -isnot [string] -or $routing.model -isnot [string] -or $routing.delegate -isnot [bool]) {
-        throw "Skill eval '$id' has incomplete routing expectations."
+    } elseif ($routing.skill -isnot [string]) {
+        throw "Skill eval '$id' must define its first-stage specialized-skill expectation."
     }
 }
-foreach ($contract in @('Get-WorkshopJevDecision', 'scripts/jev-routing.ps1', 'JEV is advisory only', 'authoritative for intake')) {
+foreach ($contract in @('Get-WorkshopJevDecision', 'scripts/jev-routing.ps1', 'JEV is an advisory, staged, on-demand classifier', 'authoritative for intake', 'catalog/models.md', 'do not ask later stages')) {
     Assert-CommandContract $foreman $contract 'workshop-foreman'
 }
 foreach ($contract in @('The selected profile supplies', 'role/developer instructions, sandbox, and reasoning effort.', 'its model overrides only that profile''s default model', 'in the `herdr agent start', '--model` argument for that invocation;', 'fallback or no accepted route uses the', 'current profile default.')) {
@@ -141,13 +141,13 @@ $jev = Get-Content -LiteralPath (Join-Path $root 'scripts/jev-routing.ps1') -Raw
 foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'foreman-fallback', 'jev-routing.jsonl')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
-foreach ($contract in @("`$agents = @('master-craftsman', 'inspector', 'master-inspector')", "`$models = @('gpt-5.6-luna', 'gpt-5.6-terra')", 'independently of the selected agent role')) {
+foreach ($contract in @("ValidateSet('skill', 'delegation', 'role', 'model')", "`$allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')", "`$catalog = Join-Path `$Root 'catalog/models.md'", 'available to current Codex account', "`$allowed.model = @(`$criteria.model.Keys)", 'cheapest capable available model independently of role', 'task_id', 'decision_type', 'decision_value', 'ObservedDownstreamTaskTokens', 'jev_assisted_total_tokens')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
-if ($jev -match '\$profiles\[\$answers\.agent\.choice\]\s*-ne\s*\$answers\.model\.choice') { throw 'JEV agent and model choices must remain independent.' }
+if ($jev -match 'workshop-foreman.*github-merge-pr') { throw 'JEV specialized-skill allowlist must exclude workshop-foreman.' }
 if ($jev -match "'fitter'") { throw 'JEV must not route to Fitter.' }
 $substantiveRouting = ($definitions.evaluations | Where-Object id -eq 'jev-substantive-task').routing
-if ($substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover the Master Craftsman/Luna override.' }
+if ($substantiveRouting.skill -ne 'none' -or -not $substantiveRouting.delegate -or $substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover staged no-skill, delegation, Master Craftsman, and Luna.' }
 $cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
 if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
 $fitterEvaluation = $definitions.evaluations | Where-Object id -eq 'fitter-pr'
@@ -183,7 +183,7 @@ foreach ($contract in @('tool/CLI drift', 'sanitized JSONL', 'routing ID', 'hand
 }
 
 $cleanup = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1') -Raw
-foreach ($contract in @('herdr workspace get $Workspace', "`$response.id -ne 'cli:workspace:get'", 'workspace_id -cne $Workspace', 'worktree.repo_root', 'herdr worktree list --cwd $Repository --trust-repository', 'ConvertFrom-Json -ErrorAction Stop', "`$response.id -ne 'cli:worktree:list'", '$response.result.type -ne', '$response.result.worktrees', 'open_workspace_id -ceq $Workspace', 'function Assert-CleanWorktree', 'git -C $Path status --porcelain', 'function Assert-MergedPullRequest', 'Push-Location -LiteralPath $Path', 'finally { Pop-Location }', 'gh repo view --json nameWithOwner', '$githubRepositoryRecord.nameWithOwner -ine $GitHubRepository', 'gh pr view $PullRequest --repo $GitHubRepository --json number,state,baseRefName,headRefOid', "`$pr.number -ne [long]`$PullRequest", "`$pr.state -cne 'MERGED'", '$pr.baseRefName -cne $Base', '$pr.headRefOid -cne $head', 'function Close-CwdSharingWorkspaces', 'herdr workspace list', 'herdr pane list --workspace $candidate', 'Where-Object { $_ -cne $Workspace }', 'herdr workspace close $candidate', 'Assert-MergedPullRequest $worktreePath', 'herdr worktree remove --workspace $Workspace --trust-repository', 'GitHub repository, pull request, and base for a verified merge, or -DiscardAuthorization.', 'Release current CWD-sharing workspace locks, then recheck immediately before removal.')) {
+foreach ($contract in @('herdr workspace get $Workspace', "`$response.id -ne 'cli:workspace:get'", 'workspace_id -cne $Workspace', 'worktree.repo_root', 'herdr worktree list --cwd $Repository --trust-repository', 'ConvertFrom-Json -ErrorAction Stop', "`$response.id -ne 'cli:worktree:list'", '$response.result.type -ne', '$response.result.worktrees', 'open_workspace_id -ceq $Workspace', 'function Assert-CleanWorktree', 'git -C $Path status --porcelain', 'function Assert-MergedPullRequest', 'Push-Location -LiteralPath $Path', 'finally { Pop-Location }', 'gh repo view --json nameWithOwner', '$canonicalGitHubRepository = $githubRepositoryRecord.nameWithOwner', '$canonicalGitHubRepository -ine $GitHubRepository', 'gh pr view $PullRequest --repo $canonicalGitHubRepository --json number,state,baseRefName,headRefOid', "`$pr.number -ne [long]`$PullRequest", "`$pr.state -cne 'MERGED'", '$pr.baseRefName -cne $Base', '$pr.headRefOid -cne $head', 'function Close-CwdSharingWorkspaces', 'herdr workspace list', 'herdr pane list --workspace $candidate', 'Where-Object { $_ -cne $Workspace }', 'herdr workspace close $candidate', 'Assert-MergedPullRequest $worktreePath', 'herdr worktree remove --workspace $Workspace --trust-repository', 'GitHub repository, pull request, and base for a verified merge, or -DiscardAuthorization.', 'Release current CWD-sharing workspace locks, then recheck immediately before removal.')) {
     Assert-CommandContract $cleanup $contract 'workshop-clear-bench'
 }
 if ($cleanup -match '(?m)^.*herdr worktree remove.*--force' -or $cleanup -match '(?i)branch.*delete') { throw 'workshop-clear-bench must not force removal or delete branches.' }

@@ -98,6 +98,9 @@ exit /b 1
         $result = & pwsh -NoProfile -File $gate -Workspace bench-12 -Repository (Join-Path $fixture 'repository') -GitHubRepository test/repo -PullRequest 42 -Base main -WhatIf 2>&1
         if ($LASTEXITCODE -eq 0 -or ($result | Out-String) -notmatch 'repository does not match' -or (Get-Content -LiteralPath $log -Raw) -match 'workspace close|worktree remove') { throw 'Cleanup gate must reject a mismatched GitHub repository before cleanup.' }
         Set-Content -LiteralPath $ghRepositoryState -Value (@{ nameWithOwner = 'test/repo' } | ConvertTo-Json -Compress)
+        Set-Content -LiteralPath $log -Value ''
+        $result = & pwsh -NoProfile -File $gate -Workspace bench-12 -Repository (Join-Path $fixture 'repository') -GitHubRepository github.com/test/repo -PullRequest 42 -Base main -WhatIf 2>&1
+        if ($LASTEXITCODE -eq 0 -or ($result | Out-String) -notmatch 'repository does not match' -or (Get-Content -LiteralPath $log -Raw) -match 'workspace close|worktree remove') { throw 'Cleanup gate must reject a host-qualified command locator and require its canonical nameWithOwner.' }
         Remove-Item -LiteralPath $closed -Force -ErrorAction Ignore
         Set-Content -LiteralPath $log -Value ''
         $env:HERDR_CLOSE_FAILURE = '0'

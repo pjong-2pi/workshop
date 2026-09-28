@@ -29,8 +29,10 @@ pwsh -NoProfile -File .agents/skills/workshop-clear-bench/scripts/remove-workspa
 ```
 
 For an authorized discard, replace the GitHub merge parameters with
-`-DiscardAuthorization "$DISCARD_AUTHORIZATION"`. The gate uses structured
-`gh repo view` JSON from the worktree to bind the supplied repository, then uses
+`-DiscardAuthorization "$DISCARD_AUTHORIZATION"`. `GITHUB_REPOSITORY` must be the
+canonical `OWNER/REPO` derived by the merge skill, not its earlier gh command
+locator. The gate uses structured `gh repo view` JSON from the worktree to bind
+that canonical repository, then uses
 `gh pr view` JSON to verify the exact merged PR and owning `HEAD`, discovers
 current Herdr workspaces and panes, closes only auxiliary panes sharing the
 worktree CWD, verifies each close, then rechecks the owner and cleanliness before

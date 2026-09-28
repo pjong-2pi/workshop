@@ -57,8 +57,9 @@ function Assert-MergedPullRequest([string]$Path) {
     try { $result = & gh repo view --json nameWithOwner 2>&1; $exitCode = $LASTEXITCODE } finally { Pop-Location }
     if ($exitCode -ne 0) { throw "Could not verify repository for workspace '$Workspace'; stop and report." }
     try { $githubRepositoryRecord = ($result | Out-String | ConvertFrom-Json -ErrorAction Stop) } catch { throw 'GitHub returned malformed repository state; stop and report.' }
-    if ($githubRepositoryRecord.nameWithOwner -isnot [string] -or $githubRepositoryRecord.nameWithOwner -ine $GitHubRepository) { throw 'GitHub repository does not match the owning worktree; stop and report.' }
-    $result = & gh pr view $PullRequest --repo $GitHubRepository --json number,state,baseRefName,headRefOid 2>&1
+    $canonicalGitHubRepository = $githubRepositoryRecord.nameWithOwner
+    if ($canonicalGitHubRepository -isnot [string] -or $canonicalGitHubRepository -notmatch '^[^/]+/[^/]+$' -or $canonicalGitHubRepository -ine $GitHubRepository) { throw 'GitHub repository does not match the owning worktree; stop and report.' }
+    $result = & gh pr view $PullRequest --repo $canonicalGitHubRepository --json number,state,baseRefName,headRefOid 2>&1
     if ($LASTEXITCODE -ne 0) { throw "Could not verify pull request '$PullRequest'; stop and report." }
     try { $pr = ($result | Out-String | ConvertFrom-Json -ErrorAction Stop) } catch { throw 'GitHub returned malformed pull request state; stop and report.' }
     if ($null -eq $pr -or $pr.number -isnot [int] -and $pr.number -isnot [long] -or $pr.number -ne [long]$PullRequest -or

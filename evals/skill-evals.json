@@ -85,18 +85,18 @@
       "prompt": "Review pull request 42 in the supplied repository.",
       "fixture": "sha-bound-pull-request",
       "expect": { "skill_invoked": ["workshop-foreman", "github-check-pr"], "skill_not_invoked": [] },
-      "routing": { "skill": "github-check-pr", "agent": "inspector", "model": "gpt-5.6-luna", "delegate": true },
-      "pass_condition": "Consumes a high-confidence allowlisted JEV review recommendation as advisory input while Foreman retains PR inspection and authorization boundaries.",
-      "trace": "correlated JEV routing and completion records, confidence, selected and final skill/agent/model/delegate, observed baseline total, projected JEV total including router tokens, latency, and outcome"
+      "routing": { "skill": "github-check-pr", "agent": null, "model": null, "delegate": null },
+      "pass_condition": "Consumes only a high-confidence allowlisted specialized-skill JEV recommendation; Foreman retains PR inspection and authorization boundaries and does not request later stages.",
+      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
     },
     {
       "id": "jev-substantive-task",
       "prompt": "Implement the specified validation rule across the cohesive managed-repository module; the behavior is well-defined, but the change is substantive.",
       "fixture": "clean-managed-repository",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
-      "routing": { "skill": "workshop-foreman", "agent": "master-craftsman", "model": "gpt-5.6-luna", "delegate": true },
-      "pass_condition": "Consumes a high-confidence allowlisted JEV Master Craftsman role/instructions with the cheaper Luna model for a well-defined implementation, without changing the required isolated lifecycle and review.",
-      "trace": "correlated JEV routing and completion records, confidence, selected and final skill/agent/model/delegate, worktree lifecycle, checks, observed baseline total, projected JEV total including router tokens, latency, and outcome"
+      "routing": { "skill": "none", "agent": "master-craftsman", "model": "gpt-5.6-luna", "delegate": true },
+      "pass_condition": "After no specialized skill applies, consumes high-confidence delegation, role, and independent cheapest-capable Luna recommendations for a well-defined implementation without changing the required isolated lifecycle and review.",
+      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, worktree lifecycle, checks, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
     },
     {
       "id": "jev-trivial-task",
@@ -104,8 +104,8 @@
       "fixture": "initialized-workshop",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
       "routing": { "skill": "none", "agent": "master-craftsman", "model": "gpt-5.6-terra", "delegate": false },
-      "pass_condition": "Consumes a high-confidence allowlisted non-delegated recommendation while Foreman performs the trivial direct edit.",
-      "trace": "correlated JEV routing and completion records, confidence, selected and final skill/agent/model/delegate, observed baseline total, projected JEV total including router tokens, latency, and outcome"
+      "pass_condition": "After no specialized skill applies, consumes a high-confidence non-delegation recommendation while Foreman performs the trivial direct edit without requesting role or model.",
+      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
     },
     {
       "id": "jev-fallback",
@@ -113,8 +113,8 @@
       "fixture": "offline-workshop",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
       "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Uses existing Foreman judgment, correlates fallback routing with final completion telemetry, and performs no network-dependent test action.",
-      "trace": "fallback reason, Foreman final route/delegation/model/outcome, observed baseline total, and null JEV projection when router counters are unavailable"
+      "pass_condition": "Uses existing Foreman judgment for any rejected stage, correlates fallback routing with final completion telemetry, and performs no network-dependent test action.",
+      "trace": "task/stage fallback reason, Foreman final route/delegation/role/model/outcome, observed baseline total, and null JEV-assisted total when counters are unavailable"
     },
     {
       "id": "fitter-pr",

@@ -12,41 +12,44 @@ only incidental, obvious edits directly.
 
 ## Advisory JEV routing
 
-For every task, map the request without copying its text into this exact
-single-line routing context grammar:
-`intent=<setup|bench-cleanup|pr-create|pr-check|pr-merge|implementation|investigation|review|other>;scope=<workshop|managed-repo|pr|workspace|local>;risk=<routine|architecture|concurrency|security|data-loss|authority>;effort=<trivial|substantive>`.
-It contains only allowlisted tags: never include credentials, secrets,
-private/customer data, code or file contents, or authorization material. Import
-the repository-root script (never a skill-local `scripts` path):
+JEV is an advisory, staged, on-demand classifier. Import the repository-root
+script (never a skill-local `scripts` path) and give it only the current
+allowlisted decision type and value; never provide request text, intent/scope/
+risk/effort preprocessing, credentials, secrets, private/customer data,
+authorization material, or unnecessary code/file contents:
 
 ```powershell
 . (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
-$JevDecision = Get-WorkshopJevDecision -RoutingContext $RoutingContext -Root $WorkshopRoot
+$JevTaskId = [guid]::NewGuid()
+$SkillDecision = Get-WorkshopJevDecision -TaskId $JevTaskId -DecisionType Skill -DecisionValue '<specialized-skill-or-none>' -Root $WorkshopRoot
 ```
 
-JEV is advisory only:
-use its minimal `skill`, `agent`, `model`, and `delegate` decision only when its
-source is `jev`; otherwise use existing Foreman judgment. Foreman remains
+Ask the stages only in order: first `Skill` for specialized skills only (exclude
+`workshop-foreman`); if that resolves the work, stop. If work remains, ask
+`Delegation`; only after Foreman accepts that advisory delegation, ask `Role`, then
+ask `Model` independently for the cheapest capable model available in
+`catalog/models.md`; provide JEV only the current available model names and their
+catalog characteristics. Validate every answer against current capabilities and the
+existing allowlists. A rejected, unavailable, malformed, or low-confidence answer
+falls back safely to Foreman judgment; do not ask later stages. Foreman remains
 authoritative for intake, user interaction, authorization, Herdr/worktrees,
-verification, review, escalation, and cleanup. Never let a JEV decision bypass
-these rules or select anything outside the existing skills and profiles.
+verification, review, escalation, cleanup, and final accept/reject decisions.
 
 The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
-bounded API call and confidence/allowlist validation, and records an ignored local
-telemetry row. Do not run it in deterministic tests with network credentials.
-At the user-facing gate for every routed task, including fallback, blocked, and
-error paths, close that row in `finally` with the same `$JevDecision.routing_id`:
+bounded API call and confidence/current-capability validation, and records ignored
+local per-task, per-stage telemetry. Stocktake remains inventory-only. Do not run
+it in deterministic tests with network credentials. At the user-facing gate,
+including fallback, blocked, and error paths, close the task in `finally`:
 
 ```powershell
-Complete-WorkshopJevTelemetry -Root $WorkshopRoot -RoutingId $JevDecision.routing_id -FinalRoute $FinalRoute -FinalDelegation $FinalDelegation -FinalModel $FinalModel -Outcome $Outcome -BaselineActualTotalTokens $BaselineActualTotalTokens -ProjectedJevRouteTokens $ProjectedJevRouteTokens
+Complete-WorkshopJevTelemetry -Root $WorkshopRoot -TaskId $JevTaskId -FinalRoute $FinalRoute -FinalDelegation $FinalDelegation -FinalRole $FinalRole -FinalModel $FinalModel -Outcome $Outcome -BaselineActualTotalTokens $BaselineActualTotalTokens -ObservedDownstreamTaskTokens $ObservedDownstreamTaskTokens
 ```
 
-`$FinalRoute` and `$FinalModel` describe Foreman's actual final outcome, while
-`$Outcome` is one of `completed`, `blocked`, `error`, or `cancelled`; the completion call records
-the explicit observed baseline total and the explicit JEV-route token projection.
-When both router counters are observed, it adds them to the projection; otherwise
-the projected total remains null. Never estimate metrics, use prices, or include
-request text, credentials, code, or private data.
+Each row carries the task ID, stage decision type/value, confidence, JEV version,
+observed tokens and latency, and accepted/rejected/fallback status. Completion
+records Foreman's final decision and the explicit observed baseline comparison.
+Keep totals null when any required observed counter is missing: never estimate tokens,
+latency, prices, or capabilities.
 
 ## Orchestration hiccups
 
@@ -222,8 +225,11 @@ Remove-Item -LiteralPath $FitterClaim
 ## Finish
 
 Inspect the complete diff and rerun checks required by the target instructions or
-not adequately evidenced by workers. After verified GitHub merge, pass the exact
-PR, repository, and base to the clear-bench gate with the owning workspace ID.
+not adequately evidenced by workers. After verified GitHub merge, derive
+`$GitHubRepository` as canonical `OWNER/REPO` from the merge skill's structured
+`gh repo view` `nameWithOwner` result (keep `$Repository` as the local path), then
+pass the exact PR, canonical GitHub repository, and base to the clear-bench gate
+with the owning workspace ID.
 The gate re-verifies the merge, re-discovers and closes only current auxiliary
 CWD-sharing workspaces, then removes the clean integrated worktree while keeping
 the owner live. The verified merge is sufficient authority; do not ask again. An
