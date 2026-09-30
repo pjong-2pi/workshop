@@ -40,7 +40,7 @@ try {
     $review = Invoke-TestJevFlow -Root $root -TaskId ([guid]::NewGuid()) -TaskDescription 'inspect pull request' -Responses ([Collections.Generic.Queue[object]]@((New-Response github-check-pr))) -Calls $reviewCalls
     $mergeCalls = [Collections.Generic.List[object]]::new()
     $merge = Invoke-TestJevFlow -Root $root -TaskId ([guid]::NewGuid()) -TaskDescription 'merge pull request' -Responses ([Collections.Generic.Queue[object]]@((New-Response github-merge-pr))) -Calls $mergeCalls
-    Assert-True ($create.skill.value -eq 'github-create-pr' -and $review.skill.value -eq 'github-check-pr' -and $merge.skill.value -eq 'github-merge-pr' -and $createCalls.Count -eq 1 -and $reviewCalls.Count -eq 1 -and $mergeCalls.Count -eq 1) 'Task semantics must distinguish create, inspect, and merge PR skills.'
+    Assert-True ($create.skill.value -eq 'github-create-pr' -and $review.skill.value -eq 'github-check-pr' -and $merge.skill.value -eq 'github-merge-pr' -and $create.skill.reason -eq 'accepted' -and $createCalls.Count -eq 1 -and $reviewCalls.Count -eq 1 -and $mergeCalls.Count -eq 1) 'Task semantics must distinguish create, inspect, and merge PR skills.'
     Assert-True ($createCalls[0].state -eq 'decision=skill;task=create pull request' -and $reviewCalls[0].state -eq 'decision=skill;task=inspect pull request' -and $mergeCalls[0].state -eq 'decision=skill;task=merge pull request') 'Create, check, and merge must each send their exact semantic state.'
 
     $directTask = [guid]::NewGuid(); $directCalls = [Collections.Generic.List[object]]::new()
@@ -63,6 +63,54 @@ try {
     }
     Assert-True ($invalidCalls.Count -eq 0) 'Rejected task descriptions must not invoke JEV.'
 
+    function Assert-FallbackReason {
+        param([string] $Reason, [scriptblock] $Request)
+        $task = [guid]::NewGuid()
+        $decision = Get-WorkshopJevDecision -TaskId $task -DecisionType skill -TaskDescription 'inspect pull request' -Root $root -Request $Request
+        $row = @((Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json) | Where-Object { $_.event -eq 'routing' -and $_.task_id -eq $task })
+        Assert-True ($decision.source -eq 'foreman-fallback' -and $decision.reason -eq $Reason -and $row.Count -eq 1 -and $row[0].reason -eq $Reason) "Injected $Reason failure must return and record one stable reason."
+    }
+    Assert-FallbackReason sandbox-tls { param($body) throw [Security.Authentication.AuthenticationException]::new('private-tls-marker SEC_E_NO_CREDENTIALS') }
+    Assert-FallbackReason timeout { param($body) throw [TimeoutException]::new('private-timeout-marker') }
+    Assert-FallbackReason http-auth { param($body) throw [Net.Http.HttpRequestException]::new('private-auth-marker', $null, [Net.HttpStatusCode]::Unauthorized) }
+    Assert-FallbackReason api-unavailable { param($body) throw [Net.WebException]::new('private-transport-marker') }
+    $savedApiKey = $env:TYPESAFE_API_KEY
+    try {
+        $env:TYPESAFE_API_KEY = ''
+        $missingTask = [guid]::NewGuid()
+        $missing = Get-WorkshopJevDecision -TaskId $missingTask -DecisionType skill -TaskDescription 'inspect pull request' -Root $root
+        $missingRow = @((Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json) | Where-Object { $_.event -eq 'routing' -and $_.task_id -eq $missingTask })
+        Assert-True ($missing.reason -eq 'missing-api-credential' -and $missingRow.Count -eq 1 -and $missingRow[0].reason -eq 'missing-api-credential') 'Missing credentials must return and record a stable reason without a request.'
+    } finally { if ($null -eq $savedApiKey) { Remove-Item Env:TYPESAFE_API_KEY -ErrorAction Ignore } else { $env:TYPESAFE_API_KEY = $savedApiKey } }
+    $rejectedTask = [guid]::NewGuid(); $contextTask = [guid]::NewGuid()
+    $rejected = Get-WorkshopJevDecision -TaskId $rejectedTask -DecisionType skill -TaskDescription 'inspect pull request' -Root $root -Request { param($body) New-Response github-check-pr 0.39 }
+    $context = Get-WorkshopJevDecision -TaskId $contextTask -DecisionType skill -TaskDescription 'raw test marker' -Root $root -Request { param($body) New-Response github-check-pr }
+    $reasonRows = @((Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json)
+        | Where-Object { $_.event -eq 'routing' -and $_.task_id -in @($rejectedTask, $contextTask) })
+    Assert-True ($rejected.reason -eq 'rejected-response' -and $context.reason -eq 'context-rejected' -and $reasonRows.Count -eq 2 -and (@($reasonRows.reason) -join ',') -eq 'rejected-response,context-rejected') 'Rejected responses and invalid context must return and record stable reasons.'
+
+    $retryTask = [guid]::NewGuid(); $restrictedPayloads = [Collections.Generic.List[string]]::new(); $approvedPayloads = [Collections.Generic.List[string]]::new()
+    $retried = Get-WorkshopJevDecisionWithApprovedRetry -TaskId $retryTask -DecisionType skill -TaskDescription 'inspect pull request' -Root $root -Request { param($body) $restrictedPayloads.Add($body); throw [Security.Authentication.AuthenticationException]::new('private-retry-marker SEC_E_NO_CREDENTIALS') } -ApprovedRequest { param($body) $approvedPayloads.Add($body); New-Response github-check-pr }
+    $retryRows = @((Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json) | Where-Object { $_.event -eq 'routing' -and $_.task_id -eq $retryTask })
+    Assert-True ($retried.source -eq 'jev' -and $retried.reason -eq 'accepted' -and $restrictedPayloads.Count -eq 1 -and $approvedPayloads.Count -eq 1 -and $restrictedPayloads[0] -ceq $approvedPayloads[0] -and (ConvertFrom-Json $restrictedPayloads[0]).state -eq 'decision=skill;task=inspect pull request' -and $restrictedPayloads[0] -notmatch 'private-retry-marker|Bearer' -and $retryRows.Count -eq 2 -and (@($retryRows.reason) -join ',') -eq 'sandbox-tls,accepted' -and $retryRows[0].routing_id -ne $retryRows[1].routing_id) 'Only the explicit approved request must retry sandbox TLS once with the identical sanitized payload and same task telemetry.'
+
+    function Assert-NoApprovedRetry {
+        param([string] $Reason, [string] $TaskDescription, [scriptblock] $Request)
+        $task = [guid]::NewGuid(); $approvedCalls = [Collections.Generic.List[string]]::new()
+        $decision = Get-WorkshopJevDecisionWithApprovedRetry -TaskId $task -DecisionType skill -TaskDescription $TaskDescription -Root $root -Request $Request -ApprovedRequest { param($body) $approvedCalls.Add($body); New-Response github-check-pr }
+        $rows = @((Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') | ConvertFrom-Json) | Where-Object { $_.event -eq 'routing' -and $_.task_id -eq $task })
+        Assert-True ($decision.reason -eq $Reason -and $approvedCalls.Count -eq 0 -and $rows.Count -eq 1) "$Reason must not invoke approved retry."
+    }
+    Assert-NoApprovedRetry timeout 'inspect pull request' { param($body) throw [TimeoutException]::new('private-retry-timeout') }
+    Assert-NoApprovedRetry http-auth 'inspect pull request' { param($body) throw [Net.Http.HttpRequestException]::new('private-retry-auth', $null, [Net.HttpStatusCode]::Forbidden) }
+    Assert-NoApprovedRetry api-unavailable 'inspect pull request' { param($body) throw [Net.WebException]::new('private-retry-transport') }
+    Assert-NoApprovedRetry rejected-response 'inspect pull request' { param($body) New-Response github-check-pr 0.39 }
+    Assert-NoApprovedRetry rejected-response 'inspect pull request' { param($body) New-Response not-allowed }
+    Assert-NoApprovedRetry context-rejected 'raw test marker' { param($body) New-Response github-check-pr }
+    $savedApiKey = $env:TYPESAFE_API_KEY
+    try { $env:TYPESAFE_API_KEY = ''; Assert-NoApprovedRetry missing-api-credential 'inspect pull request' $null
+    } finally { if ($null -eq $savedApiKey) { Remove-Item Env:TYPESAFE_API_KEY -ErrorAction Ignore } else { $env:TYPESAFE_API_KEY = $savedApiKey } }
+
     $missingMetricTask = [guid]::NewGuid()
     Get-WorkshopJevDecision -TaskId $missingMetricTask -DecisionType skill -TaskDescription 'inspect pull request' -Root $root -Request { param($body) New-Response github-check-pr } | Out-Null
     Complete-WorkshopJevTelemetry -Root $root -TaskId $missingMetricTask -FinalRoute github-check-pr -FinalDelegation $false -Outcome completed -BaselineActualTotalTokens 10
@@ -84,7 +132,7 @@ try {
     Assert-True ($null -eq $missingMetricCompletion.jev_assisted_total_tokens) 'Completion must keep JEV-assisted totals null when downstream counters are unavailable.'
     Assert-True ($completion.PSObject.Properties.Name -notcontains 'projected_jev_total_tokens') 'Completion telemetry must not retain projection terminology.'
     $telemetry = Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') -Raw
-    Assert-True ($telemetry -notmatch 'Alice Example|Jane Smith|account 12345|raw prompt|raw test marker|high risk authorization merge|inspect pull request|implement repository validation rule|correct local typo|test-key|intent=|scope=|risk=|effort=' -and $telemetry -match '"decision_type":"skill"' -and $telemetry -match '"confidence":0.9' -and $telemetry -match '"baseline_actual_total_tokens":200') 'Telemetry must exclude task descriptions and raw request markers while retaining observed staged metrics.'
+    Assert-True ($telemetry -notmatch 'Alice Example|Jane Smith|account 12345|raw prompt|raw test marker|high risk authorization merge|inspect pull request|implement repository validation rule|correct local typo|private-tls-marker|private-timeout-marker|private-auth-marker|private-transport-marker|test-key|intent=|scope=|risk=|effort=' -and $telemetry -match '"decision_type":"skill"' -and $telemetry -match '"confidence":0.9' -and $telemetry -match '"baseline_actual_total_tokens":200') 'Telemetry must exclude task descriptions and exception markers while retaining observed staged metrics.'
 } finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue }
 
 Write-Host 'Workshop JEV routing tests passed.'
