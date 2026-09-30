@@ -46,9 +46,15 @@ scenarios require one pass unless a failure demonstrates nondeterminism.
 
 Run each routing case twice against the same fixture and task: a without-JEV arm
 using Foreman judgment alone, then a with-JEV arm using the advisory helper. JEV
-records only the decisions actually reached: specialized skill, then delegation if
-work remains, then role and cheapest-capable available model only after accepted
-delegation. Record each stage's decision/value/confidence, router and task tokens,
+receives only a bounded single-line sanitized task description from the helper's
+small allowlisted semantic vocabulary; an unexpressible task safely skips JEV.
+Authorization is not sent to JEV and remains solely with Foreman.
+Delegation also
+receives selected skill `none`; model also receives the selected role and current
+Stocktake-backed inventory. It records only the decisions actually reached:
+specialized skill, then delegation if work remains, then role and cheapest-capable
+available model only after accepted delegation. Record each stage's
+decision/value/confidence, router and task tokens,
 router and task latency, and Foreman's final route/delegation/role/model. The helper
 correlates those rows with one completion row at the user-facing gate. It compares
 an explicit observed baseline total with explicit observed downstream task tokens plus

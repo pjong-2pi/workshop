@@ -43,7 +43,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'fitter-pr', 'active-fitter', 'concurrent-fitter', 'traversal-fitter-claim', 'foreman-hiccup', 'stocktake-models')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'fitter-pr', 'active-fitter', 'concurrent-fitter', 'traversal-fitter-claim', 'foreman-hiccup', 'stocktake-models')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -122,7 +122,7 @@ $fitter = Get-Content -LiteralPath (Join-Path $root '.codex/agents/fitter.toml')
 foreach ($contract in @('auxiliary CWD-sharing Herdr workspace', 'owning implementation writer is idle', 'github-check-pr', 'github-create-pr', 'exact PR URL and head SHA', 'Do not edit product code', 'Never merge, delete branches, force-push, stash, reset, or clean worktrees', 'Foreman retains authorization interpretation')) {
     Assert-CommandContract $fitter $contract 'fitter profile'
 }
-foreach ($id in @('jev-pr-review', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')) {
+foreach ($id in @('jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')) {
     $routing = ($definitions.evaluations | Where-Object id -eq $id).routing
     if ($null -eq $routing -or @($routing.PSObject.Properties.Name | Sort-Object) -join ',' -ne 'agent,delegate,model,skill') { throw "Skill eval '$id' must define exactly the routing fields." }
     if ($id -eq 'jev-fallback') {
@@ -141,7 +141,7 @@ $jev = Get-Content -LiteralPath (Join-Path $root 'scripts/jev-routing.ps1') -Raw
 foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'foreman-fallback', 'jev-routing.jsonl')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
-foreach ($contract in @("ValidateSet('skill', 'delegation', 'role', 'model')", "`$allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')", "`$catalog = Join-Path `$Root 'catalog/models.md'", 'available to current Codex account', "`$allowed.model = @(`$criteria.model.Keys)", 'cheapest capable available model independently of role', 'task_id', 'decision_type', 'decision_value', 'ObservedDownstreamTaskTokens', 'jev_assisted_total_tokens')) {
+foreach ($contract in @("ValidateSet('skill', 'delegation', 'role', 'model')", '[string] $TaskDescription', "`$taskWords = @('create', 'inspect', 'review', 'merge', 'pull'", "TaskDescription -notmatch '\A[a-z]+(?: [a-z]+)*\z'", 'TaskDescription.Length -gt 160', 'selected_skill=none', 'selected_role=', "`$allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')", "`$catalog = Join-Path `$Root 'catalog/models.md'", 'available to current Codex account', "`$allowed.model = @(`$criteria.model.Keys)", 'cheapest capable available model independently of role', 'task_id', 'decision_type', 'decision_value', 'ObservedDownstreamTaskTokens', 'jev_assisted_total_tokens')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
 if ($jev -match 'workshop-foreman.*github-merge-pr') { throw 'JEV specialized-skill allowlist must exclude workshop-foreman.' }
