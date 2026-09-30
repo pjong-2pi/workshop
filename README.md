@@ -41,14 +41,21 @@ pwsh -NoProfile -File tests/run.ps1
 `tests/validate.ps1` remains the fast static check used by the suite and when
 editing repository structure or eval definitions.
 
-Foreman consults JEV as a confidence-gated advisory route for every task. It uses
-the fixed TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, then falls
-back to Foreman judgment on any unavailable, malformed, low-confidence, or
-disallowed result. Ignored `.local/jev-routing.jsonl` correlates observed routing
-with the Foreman's final route, delegation, model, duration, outcome, and any
-explicit observed baseline total or JEV-route token projection. The latter includes
-observed JEV input/output tokens; unavailable totals remain null. It uses no prices
-or token estimator.
+Foreman consults JEV as a confidence-gated, on-demand advisory classifier: first
+for a specialized skill (never Foreman itself), then delegation only if work
+remains, then role and independently cheapest-capable available model only after
+delegation is accepted. It sends a bounded single-line sanitized task description
+composed only of the helper's small allowlisted semantic vocabulary; if that cannot
+express the task, Foreman safely falls back without asking JEV. Authorization is not
+sent to JEV and remains solely with Foreman. It sends only
+`selected_skill=none` for delegation or the selected role for model; it
+never sends the raw prompt or Foreman risk/effort classifications. It uses the fixed
+TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, and falls back to Foreman
+judgment on any unavailable, malformed, low-confidence, or disallowed result.
+Ignored `.local/jev-routing.jsonl` correlates each task/stage with the
+Foreman's final decision and explicit observed baseline comparison; JEV-assisted
+totals are null unless both explicit observed downstream and router counters exist.
+It uses no prices or token estimator.
 
 At the user-facing gate, Foreman records observed orchestration hiccups (CLI/tool
 drift, avoidable retries, coordination failures, or permission/instruction
