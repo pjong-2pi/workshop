@@ -43,7 +43,7 @@ if ($setup -match 'SetEnvironmentVariable') { throw 'Setup must not persist envi
 
 $definitions = Get-Content -LiteralPath (Join-Path $root 'evals/skill-evals.json') -Raw | ConvertFrom-Json
 if ($definitions.version -ne 1 -or $definitions.executable -or $null -eq $definitions.evaluations) { throw 'Skill eval definitions have an invalid schema.' }
-$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'jev-sandbox-tls', 'fitter-pr', 'active-fitter', 'concurrent-fitter', 'traversal-fitter-claim', 'foreman-hiccup', 'stocktake-models')
+$expected = @('explicit-setup', 'uninitialized-clone', 'foreman-task', 'pr-review', 'routine-development', 'initialized-workshop', 'clear-completed-bench', 'jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'fitter-pr', 'active-fitter', 'concurrent-fitter', 'traversal-fitter-claim', 'foreman-hiccup', 'stocktake-models')
 foreach ($id in $expected) {
     $evaluation = @($definitions.evaluations | Where-Object id -eq $id)
     if ($evaluation.Count -ne 1 -or [string]::IsNullOrWhiteSpace($evaluation[0].prompt) -or
@@ -122,39 +122,32 @@ $fitter = Get-Content -LiteralPath (Join-Path $root '.codex/agents/fitter.toml')
 foreach ($contract in @('auxiliary CWD-sharing Herdr workspace', 'owning implementation writer is idle', 'github-check-pr', 'github-create-pr', 'exact PR URL and head SHA', 'Do not edit product code', 'Never merge, delete branches, force-push, stash, reset, or clean worktrees', 'Foreman retains authorization interpretation')) {
     Assert-CommandContract $fitter $contract 'fitter profile'
 }
-foreach ($id in @('jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback', 'jev-sandbox-tls')) {
+foreach ($id in @('jev-pr-review', 'jev-pr-create', 'jev-pr-merge', 'jev-substantive-task', 'jev-trivial-task', 'jev-fallback')) {
     $routing = ($definitions.evaluations | Where-Object id -eq $id).routing
     if ($null -eq $routing -or @($routing.PSObject.Properties.Name | Sort-Object) -join ',' -ne 'agent,delegate,model,skill') { throw "Skill eval '$id' must define exactly the routing fields." }
-    if ($id -in @('jev-fallback', 'jev-sandbox-tls')) {
+    if ($id -eq 'jev-fallback') {
         if ($null -ne $routing.skill -or $null -ne $routing.agent -or $null -ne $routing.model -or $null -ne $routing.delegate) { throw "Skill eval '$id' must leave unavailable routing fields null." }
     } elseif ($routing.skill -isnot [string]) {
         throw "Skill eval '$id' must define its first-stage specialized-skill expectation."
     }
 }
-foreach ($contract in @('Get-WorkshopJevDecision', 'Get-WorkshopJevDecisionWithApprovedRetry', 'scripts/jev-routing.ps1', 'JEV is an advisory, staged, on-demand classifier', 'authoritative for intake', 'catalog/models.md', 'do not ask later stages')) {
+foreach ($contract in @('Get-WorkshopJevDecision', 'scripts/jev-routing.ps1', 'JEV is an advisory, staged, on-demand classifier', 'authoritative for intake', 'catalog/models.md', 'do not ask later stages')) {
     Assert-CommandContract $foreman $contract 'workshop-foreman'
-}
-foreach ($contract in @('Run JEV in the configured network-enabled', 'If and only if a stage returns `sandbox-tls`', 'identical sanitized stage once through approved network execution', 'same task ID; the retry is a separately observed stage call.', 'Do not retry low', 'authentication failures, context rejection,', 'explicit approved execution', 'helper never requests sandbox escalation. Foreman remains')) {
-    Assert-CommandContract $foreman $contract 'workshop-foreman JEV transport retry'
 }
 foreach ($contract in @('The selected profile supplies', 'role/developer instructions, sandbox, and reasoning effort.', 'its model overrides only that profile''s default model', 'in the `herdr agent start', '--model` argument for that invocation;', 'fallback or no accepted route uses the', 'current profile default.')) {
     Assert-CommandContract $foreman $contract 'workshop-foreman'
 }
 $jev = Get-Content -LiteralPath (Join-Path $root 'scripts/jev-routing.ps1') -Raw
-foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'Get-JevTransportFailureReason', 'Get-WorkshopJevDecisionWithApprovedRetry', '[scriptblock] $ApprovedRequest', '$decision.reason -eq ''sandbox-tls''', 'sandbox-tls', 'missing-api-credential', 'http-auth', 'rejected-response', 'context-rejected', 'foreman-fallback', 'jev-routing.jsonl')) {
+foreach ($contract in @('https://api.typesafe.ai/v1/systemone', 'TYPESAFE_API_KEY', 'ConvertTo-Json', 'Invoke-RestMethod', 'TimeoutSec 5', '$floor = 0.40', 'Test-JevChoice', 'foreman-fallback', 'jev-routing.jsonl')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
-foreach ($contract in @("ValidateSet('skill', 'delegation', 'role', 'model')", '[string] $TaskDescription', "`$taskWords = @('create', 'inspect', 'review', 'merge', 'pull'", "TaskDescription -notmatch '\A[a-z]+(?: [a-z]+)*\z'", 'TaskDescription.Length -gt 160', 'selected_skill=none', 'selected_role=', "`$allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')", "`$catalog = Join-Path `$Root 'catalog/models.md'", 'available to current Codex account', "`$allowed.model = @(`$criteria.model.Keys)", 'cheapest capable available model independently of role', 'task_id', 'decision_type', 'decision_value', 'ObservedDownstreamTaskTokens', 'jev_assisted_total_tokens')) {
+foreach ($contract in @("ValidateSet('skill', 'delegation', 'role', 'model')", '[string] $TaskDescription', 'TaskDescription.Length -gt 160', 'selected_skill=none', 'selected_role=', "`$allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr')", "Join-Path `$Root 'catalog/models.md'", "`$allowed.model = @(`$criteria.model.Keys)", 'least-capable, cheapest appropriate available model', 'task_id', 'decision_type', 'decision_value', 'accepted', 'latency_ms')) {
     Assert-CommandContract $jev $contract 'jev-routing'
 }
 if ($jev -match 'workshop-foreman.*github-merge-pr') { throw 'JEV specialized-skill allowlist must exclude workshop-foreman.' }
 if ($jev -match "'fitter'") { throw 'JEV must not route to Fitter.' }
 $substantiveRouting = ($definitions.evaluations | Where-Object id -eq 'jev-substantive-task').routing
 if ($substantiveRouting.skill -ne 'none' -or -not $substantiveRouting.delegate -or $substantiveRouting.agent -ne 'master-craftsman' -or $substantiveRouting.model -ne 'gpt-5.6-luna') { throw 'JEV substantive eval must cover staged no-skill, delegation, Master Craftsman, and Luna.' }
-$sandboxTlsEvaluation = $definitions.evaluations | Where-Object id -eq 'jev-sandbox-tls'
-foreach ($contract in @('configured network-enabled context', 'identical sanitized stage exactly once', 'only after sandbox-tls', 'Foreman retains the escalation boundary', 'separate same-task stage telemetry')) {
-    Assert-CommandContract $sandboxTlsEvaluation.pass_condition $contract 'jev-sandbox-tls eval'
-}
 $cleanupEvaluation = $definitions.evaluations | Where-Object id -eq 'clear-completed-bench'
 if ($cleanupEvaluation.expect.skill_invoked -notcontains 'workshop-clear-bench') { throw "Skill eval 'clear-completed-bench' must invoke workshop-clear-bench." }
 $fitterEvaluation = $definitions.evaluations | Where-Object id -eq 'fitter-pr'
@@ -206,11 +199,11 @@ foreach ($command in @('RuntimeInformation', 'PSVersionTable', 'git config user.
 if ($environment -match '\$problems\.Add\([^\r\n]*HERDR_ENV') { throw 'HERDR_ENV must remain informational in the environment diagnostic.' }
 
 $stocktake = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-stocktake/SKILL.md') -Raw
-foreach ($contract in @('Codex''s local app-server `model/list`', 'unknown', 'never select, rank, or recommend', 'No periodic refresh')) {
+foreach ($contract in @('Codex''s local app-server `model/list`', 'never select, rank, or recommend', 'No periodic refresh')) {
     Assert-CommandContract $stocktake $contract 'workshop-stocktake'
 }
 $stocktakeScript = Get-Content -LiteralPath (Join-Path $root '.agents/skills/workshop-stocktake/scripts/update-model-catalog.ps1') -Raw
-foreach ($contract in @("'model/list'", "'initialized'", 'Assert-ModelPage', 'includeHidden = $false', 'available to current Codex account', 'Last checked (UTC)', 'Unchanged model catalog')) {
+foreach ($contract in @("'model/list'", "'initialized'", 'Assert-ModelPage', 'includeHidden = $false', 'description', 'defaultReasoningEffort', 'Last checked (UTC)', 'Unchanged model catalog')) {
     Assert-CommandContract $stocktakeScript $contract 'workshop-stocktake script'
 }
 

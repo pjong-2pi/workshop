@@ -13,62 +13,38 @@ only incidental, obvious edits directly.
 ## Advisory JEV routing
 
 JEV is an advisory, staged, on-demand classifier. Import the repository-root
-script (never a skill-local `scripts` path) and give it only a deliberately
-small, bounded, single-line sanitized semantic task description; never provide
-the raw request, a general summary/classification, credentials, secrets,
-private/customer data, authorization material, or unnecessary code/file
-contents. Do not preclassify implementation/investigation/review risk,
-trivial/substantive work, or well-defined/demanding work:
+script (never a skill-local path) and give it a deliberately sanitized, non-empty,
+single-line task description of at most 160 characters. Never send the raw request,
+credentials, secrets, private data, authorization material, or code contents:
 
 ```powershell
 . (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
 $JevTaskId = [guid]::NewGuid()
-$TaskDescription = 'inspect pull request' # 160 chars max; lowercase words from the bounded semantic vocabulary
-$SkillDecision = Get-WorkshopJevDecisionWithApprovedRetry -TaskId $JevTaskId -DecisionType Skill -TaskDescription $TaskDescription -Root $WorkshopRoot -ApprovedRequest $ApprovedJevExecution
+$TaskDescription = 'inspect pull request'
+$SkillDecision = Get-WorkshopJevDecision -TaskId $JevTaskId -DecisionType Skill -TaskDescription $TaskDescription -Root $WorkshopRoot
 ```
-
-Use only the helper's small allowlisted routing vocabulary (for example `create`,
-`inspect`, `review`, `merge`, `pull`, `request`, `implement`,
-`repository`, `validation`, `rule`, `one`, `cohesive`, `module`, `correct`,
-`local`, and `typo`). If the task cannot be expressed with those words, do not ask
-JEV; use safe Foreman fallback judgment. Authorization is never task semantics for
-JEV and remains solely with Foreman.
 
 Ask the stages only in order: first `Skill` for specialized skills only (exclude
 `workshop-foreman`); if that resolves the work, stop. If work remains, ask
 `Delegation` with the task plus `-SelectedSkill none`; only after Foreman accepts
 that advisory delegation, ask `Role` with the task alone, then ask `Model` with
-the task plus `-SelectedRole` and the independently supplied current model names
-and characteristics from `catalog/models.md`. Validate every answer against current
-capabilities and the existing allowlists. A rejected, unavailable, malformed, or
-low-confidence answer falls back safely to Foreman judgment; do not ask later stages.
+the task plus `-SelectedRole` and the independently supplied current compact catalog.
+Validate every answer against current allowlists. A rejected, unavailable, malformed,
+or low-confidence answer is an ordinary safe Foreman fallback; do not ask later stages.
+Models are selected independently of role from `catalog/models.md`; JEV is instructed
+to choose the least-capable/cheapest appropriate available model. General agent
+selection excludes `fitter`.
 Foreman remains authoritative for intake, user interaction, authorization,
 Herdr/worktrees, verification, review, escalation, cleanup, and final accept/reject
 decisions.
 
 The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
-bounded API call and confidence/current-capability validation, and records ignored
-local per-task, per-stage telemetry. Run JEV in the configured network-enabled
-context. If and only if a stage returns `sandbox-tls`, Foreman may retry that
-identical sanitized stage once through approved network execution, retaining the
-same task ID; the retry is a separately observed stage call. Do not retry low
-confidence, malformed/invalid choices, authentication failures, context rejection,
-or general outages. `ApprovedJevExecution` is Foreman's explicit approved execution
-callback; the helper never requests sandbox escalation. Foreman remains authoritative
-for that tool boundary. Stocktake remains inventory-only. Do not run
-it in deterministic tests with network credentials. At the user-facing gate,
-including fallback, blocked, and error paths, close the task in `finally`:
-
-```powershell
-Complete-WorkshopJevTelemetry -Root $WorkshopRoot -TaskId $JevTaskId -FinalRoute $FinalRoute -FinalDelegation $FinalDelegation -FinalRole $FinalRole -FinalModel $FinalModel -Outcome $Outcome -BaselineActualTotalTokens $BaselineActualTotalTokens -ObservedDownstreamTaskTokens $ObservedDownstreamTaskTokens
-```
-
-Each row carries the task ID, stage decision type/value, confidence, JEV version,
-observed tokens and latency, and accepted/rejected/fallback status, but never the
-task description or request content. Completion
-records Foreman's final decision and the explicit observed baseline comparison.
-Keep totals null when any required observed counter is missing: never estimate tokens,
-latency, prices, or capabilities.
+bounded API call and confidence validation, and records ignored local telemetry for
+each attempted decision: task ID, decision type, accepted value when any,
+accepted/fallback, supplied confidence/tokens, and latency. It never records task
+text or completion/baseline data. Stocktake remains inventory-only. The optional
+request callback exists only for deterministic tests; production uses one
+`Invoke-RestMethod` call and never retries.
 
 ## Orchestration hiccups
 

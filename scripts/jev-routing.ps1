@@ -1,46 +1,13 @@
-function Get-JevFallbackDecision {
-    param([string] $DecisionType, [string] $Reason)
-    [PSCustomObject]@{ decision_type = $DecisionType; value = $null; source = 'foreman-fallback'; reason = $Reason }
-}
-
-function Get-JevTransportFailureReason {
-    param([Exception] $Exception)
-    for ($current = $Exception; $current; $current = $current.InnerException) {
-        if ($current -is [TimeoutException] -or $current -is [Threading.Tasks.TaskCanceledException] -or ($current -is [Net.WebException] -and $current.Status -eq [Net.WebExceptionStatus]::Timeout)) { return 'timeout' }
-        $statusCode = if ($current.PSObject.Properties['StatusCode']) { $current.StatusCode } elseif ($current.PSObject.Properties['Response'] -and $current.Response -and $current.Response.PSObject.Properties['StatusCode']) { $current.Response.StatusCode }
-        if ($null -ne $statusCode -and [int]$statusCode -in 401, 403) { return 'http-auth' }
-        if ($current.Message -match 'SEC_E_NO_CREDENTIALS|No credentials are available in the security package') { return 'sandbox-tls' }
-    }
-    'api-unavailable'
-}
-
 function Test-JevChoice {
     param([object] $Answer, [string[]] $Allowed, [double] $Floor)
-    $Answer -and $Answer.type -eq 'choice' -and $Answer.choice -is [string] -and $Allowed -contains $Answer.choice -and ($Answer.confidence -is [double] -or $Answer.confidence -is [long] -or $Answer.confidence -is [int]) -and $Answer.confidence -ge $Floor -and $Answer.confidence -le 1 -and $null -ne $Answer.probabilities
+    $Answer -and $Answer.type -eq 'choice' -and $Answer.choice -is [string] -and $Allowed -contains $Answer.choice -and $Answer.confidence -is [ValueType] -and $Answer.confidence -ge $Floor -and $Answer.confidence -le 1
 }
 
 function Write-JevRoutingTelemetry {
-    param([string] $Root, [guid] $TaskId, [guid] $RoutingId, [object] $Decision, [string] $Reason, [int] $LatencyMs, [object] $Usage, [string] $JevModel, [object] $Confidence)
+    param([string] $Root, [guid] $TaskId, [object] $Decision, [int] $LatencyMs, [object] $Response)
     try {
         $directory = Join-Path $Root '.local'; New-Item -ItemType Directory -Force -Path $directory | Out-Null
-        [PSCustomObject]@{ event = 'routing'; task_id = $TaskId; routing_id = $RoutingId; timestamp_utc = [DateTime]::UtcNow.ToString('o'); decision_type = $Decision.decision_type; decision_value = $Decision.value; source = $Decision.source; reason = $Reason; latency_ms = $LatencyMs; jev_input_tokens = if ($Usage) { $Usage.input_tokens } else { $null }; jev_output_tokens = if ($Usage) { $Usage.output_tokens } else { $null }; jev_response_model = $JevModel; confidence = if ($Confidence) { $Confidence.confidence } else { $null } } | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl')
-    } catch {}
-}
-
-function Complete-WorkshopJevTelemetry {
-    param(
-        [Parameter(Mandatory)][string] $Root, [Parameter(Mandatory)][guid] $TaskId,
-        [Parameter(Mandatory)][string] $FinalRoute, [Parameter(Mandatory)][bool] $FinalDelegation,
-        [string] $FinalRole, [string] $FinalModel,
-        [Parameter(Mandatory)][ValidateSet('completed', 'blocked', 'error', 'cancelled')][string] $Outcome,
-        [Nullable[long]] $BaselineActualTotalTokens, [Nullable[long]] $ObservedDownstreamTaskTokens, [Nullable[long]] $DownstreamTaskLatencyMs
-    )
-    try {
-        $directory = Join-Path $Root '.local'; New-Item -ItemType Directory -Force -Path $directory | Out-Null
-        $rows = @(Get-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl') | ConvertFrom-Json | Where-Object { $_.event -eq 'routing' -and $_.task_id -eq $TaskId })
-        $observed = $rows.Count -gt 0 -and @($rows | Where-Object { $null -eq $_.jev_input_tokens -or $null -eq $_.jev_output_tokens }).Count -eq 0
-        $jevAssistedTotalTokens = if ($null -ne $ObservedDownstreamTaskTokens -and $observed) { $ObservedDownstreamTaskTokens + ($rows | Measure-Object -Property jev_input_tokens -Sum).Sum + ($rows | Measure-Object -Property jev_output_tokens -Sum).Sum } else { $null }
-        [PSCustomObject]@{ event = 'completion'; task_id = $TaskId; timestamp_utc = [DateTime]::UtcNow.ToString('o'); final_route = $FinalRoute; final_delegation = $FinalDelegation; final_role = $FinalRole; final_model = $FinalModel; outcome = $Outcome; baseline_actual_total_tokens = $BaselineActualTotalTokens; jev_assisted_total_tokens = $jevAssistedTotalTokens; downstream_task_latency_ms = $DownstreamTaskLatencyMs } | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl')
+        [PSCustomObject]@{ task_id = $TaskId; decision_type = $Decision.decision_type; decision_value = $Decision.value; accepted = ($Decision.source -eq 'jev'); confidence = if ($Response) { $Response.answers.decision.confidence } else { $null }; input_tokens = if ($Response) { $Response.usage.input_tokens } else { $null }; output_tokens = if ($Response) { $Response.usage.output_tokens } else { $null }; latency_ms = $LatencyMs } | ConvertTo-Json -Compress | Add-Content -LiteralPath (Join-Path $directory 'jev-routing.jsonl')
     } catch {}
 }
 
@@ -51,55 +18,35 @@ function Get-WorkshopJevDecision {
         [Parameter(Mandatory)][string] $TaskDescription, [string] $SelectedSkill, [string] $SelectedRole,
         [Parameter(Mandatory)][string] $Root, [scriptblock] $Request
     )
-    $routingId = [guid]::NewGuid(); $endpoint = 'https://api.typesafe.ai/v1/systemone'; $floor = 0.40
+    $floor = 0.40
     $allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr'); delegation = @('true', 'false'); role = @('master-craftsman', 'inspector', 'master-inspector') }
-    $watch = [Diagnostics.Stopwatch]::StartNew(); $reason = 'api-unavailable'; $response = $null; $jevModel = $null; $confidence = $null
+    $watch = [Diagnostics.Stopwatch]::StartNew(); $response = $null
     try {
-        $taskWords = @('create', 'inspect', 'review', 'merge', 'pull', 'request', 'pr', 'implement', 'repository', 'validation', 'rule', 'one', 'cohesive', 'module', 'correct', 'local', 'typo', 'workshop', 'setup', 'clear', 'completed', 'bench')
-        if ($TaskDescription.Length -gt 160 -or $TaskDescription -notmatch '\A[a-z]+(?: [a-z]+)*\z' -or @($TaskDescription.Split(' ') | Where-Object { $_ -notin $taskWords }).Count) { $reason = 'context-rejected'; throw 'JEV task description is invalid.' }
-        if (($DecisionType -eq 'delegation' -and $SelectedSkill -ne 'none') -or ($DecisionType -eq 'model' -and $SelectedRole -notin $allowed.role) -or ($DecisionType -notin @('delegation', 'model') -and ($SelectedSkill -or $SelectedRole)) -or ($DecisionType -eq 'delegation' -and $SelectedRole) -or ($DecisionType -eq 'model' -and $SelectedSkill)) { $reason = 'context-rejected'; throw 'JEV stage context is invalid.' }
-        if (-not $Request -and [string]::IsNullOrWhiteSpace($env:TYPESAFE_API_KEY)) { $reason = 'missing-api-credential'; throw 'TYPESAFE_API_KEY is not set.' }
-        $instructions = @{ skill = 'Select an applicable specialized workflow skill only. Never select workshop-foreman; choose none when no listed specialized skill applies.'; delegation = 'Recommend whether remaining work should be delegated. Foreman decides whether work remains and retains authority.'; role = 'Choose Master Craftsman for implementation or investigation, Inspector for routine review, or Master Inspector for high-risk review.'; model = 'Choose the cheapest capable available model independently of role from the current inventory characteristics.' }
+        if ($TaskDescription.Length -gt 160 -or $TaskDescription -match '[\r\n]' -or $TaskDescription -notmatch '^[\p{L}\p{N}][\p{L}\p{N} .,;:()&''""/+-]*$') { throw 'Task description is not sanitized.' }
+        if (($DecisionType -eq 'delegation' -and $SelectedSkill -ne 'none') -or ($DecisionType -eq 'model' -and $SelectedRole -notin $allowed.role) -or ($DecisionType -notin @('delegation', 'model') -and ($SelectedSkill -or $SelectedRole)) -or ($DecisionType -eq 'delegation' -and $SelectedRole) -or ($DecisionType -eq 'model' -and $SelectedSkill)) { throw 'Stage context is invalid.' }
+        $instructions = @{ skill = 'Select an applicable specialized workflow skill only. Never select workshop-foreman; choose none otherwise.'; delegation = 'Recommend whether remaining work should be delegated.'; role = 'Choose Master Craftsman for implementation or investigation, Inspector for routine review, or Master Inspector for high-risk review. Never choose fitter.'; model = 'Choose the least-capable, cheapest appropriate available model independently of role.' }
         $criteria = @{ skill = @{ none = 'No specialized skill applies.'; 'workshop-setup' = 'Explicit first-time Workshop bootstrap.'; 'workshop-clear-bench' = 'Explicit cleanup of a completed Herdr workspace.'; 'github-create-pr' = 'Create a pull request after authorization.'; 'github-check-pr' = 'Inspect an exact pull request.'; 'github-merge-pr' = 'Merge an exact pull request after authorization.' }; delegation = @{ true = 'Substantive independent work.'; false = 'Trivial direct work.' }; role = @{ 'master-craftsman' = 'Implementation or investigation.'; inspector = 'Routine review.'; 'master-inspector' = 'High-risk review.' } }
         if ($DecisionType -eq 'model') {
-            $catalog = Join-Path $Root 'catalog/models.md'
-            if (-not (Test-Path -LiteralPath $catalog -PathType Leaf)) { throw 'JEV model inventory is unavailable.' }
             $criteria.model = @{}
-            foreach ($line in Get-Content -LiteralPath $catalog) {
+            foreach ($line in Get-Content -LiteralPath (Join-Path $Root 'catalog/models.md') -ErrorAction Stop) {
                 $columns = $line.Trim().Trim('|').Split('|') | ForEach-Object Trim
-                if ($columns.Count -ge 6 -and $columns[0] -match '^gpt-' -and $columns[2].Trim() -eq 'available to current Codex account' -and -not [string]::IsNullOrWhiteSpace($columns[5]) -and $columns[5].Trim() -ne 'unknown') { $criteria.model[$columns[0].Trim()] = $columns[5].Trim() }
+                if ($columns.Count -eq 3 -and $columns[0] -notin @('Model', '---') -and $columns[0]) { $criteria.model[$columns[0]] = "description: $($columns[1]); default reasoning: $($columns[2])" }
             }
-            if ($criteria.model.Count -eq 0) { throw 'JEV model inventory is unusable.' }
+            if ($criteria.model.Count -eq 0) { throw 'Model catalog is unusable.' }
             $allowed.model = @($criteria.model.Keys)
         }
         $state = "decision=$DecisionType;task=$TaskDescription"
         if ($DecisionType -eq 'delegation') { $state += ';selected_skill=none' }
         if ($DecisionType -eq 'model') { $state += ";selected_role=$SelectedRole" }
         $body = @{ state = $state; model = 'jev-latest'; questions = @{ decision = @{ type = 'choice'; instructions = $instructions[$DecisionType]; criteria = $criteria[$DecisionType] } } } | ConvertTo-Json -Depth 8 -Compress
-        if ($Request) { $response = & $Request $body } else { $response = Invoke-RestMethod -Method Post -Uri $endpoint -Headers @{ Authorization = "Bearer $env:TYPESAFE_API_KEY" } -ContentType 'application/json' -Body $body -TimeoutSec 5 }
+        if ($Request) { $response = & $Request $body } else { $response = Invoke-RestMethod -Method Post -Uri 'https://api.typesafe.ai/v1/systemone' -Headers @{ Authorization = "Bearer $env:TYPESAFE_API_KEY" } -ContentType 'application/json' -Body $body -TimeoutSec 5 }
         $answer = $response.answers.decision
-        if (($null -ne $response.model -and $response.model -isnot [string]) -or -not (Test-JevChoice $answer $allowed[$DecisionType] $floor)) { $reason = 'rejected-response'; throw 'JEV response failed routing validation.' }
-        $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = if ($DecisionType -eq 'delegation') { [System.Convert]::ToBoolean($answer.choice) } else { $answer.choice }; source = 'jev'; reason = 'accepted'; task_id = $TaskId; routing_id = $routingId }
-        $jevModel = $response.model; $confidence = $answer; $reason = 'accepted'
+        if (-not (Test-JevChoice $answer $allowed[$DecisionType] $floor)) { throw 'Response is not an accepted choice.' }
+        $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = if ($DecisionType -eq 'delegation') { [Convert]::ToBoolean($answer.choice) } else { $answer.choice }; source = 'jev'; task_id = $TaskId }
     } catch {
-        if ($reason -eq 'api-unavailable') { $reason = Get-JevTransportFailureReason $_.Exception }
-        $decision = Get-JevFallbackDecision $DecisionType $reason; $decision | Add-Member task_id $TaskId; $decision | Add-Member routing_id $routingId
+        $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = $null; source = 'foreman-fallback'; task_id = $TaskId }
     } finally {
-        $watch.Stop(); Write-JevRoutingTelemetry -Root $Root -TaskId $TaskId -RoutingId $routingId -Decision $decision -Reason $reason -LatencyMs $watch.ElapsedMilliseconds -Usage $(if ($response) { $response.usage } else { $null }) -JevModel $jevModel -Confidence $confidence
-    }
-    $decision
-}
-
-function Get-WorkshopJevDecisionWithApprovedRetry {
-    param(
-        [Parameter(Mandatory)][guid] $TaskId,
-        [Parameter(Mandatory)][ValidateSet('skill', 'delegation', 'role', 'model')][string] $DecisionType,
-        [Parameter(Mandatory)][string] $TaskDescription, [string] $SelectedSkill, [string] $SelectedRole,
-        [Parameter(Mandatory)][string] $Root, [scriptblock] $Request, [scriptblock] $ApprovedRequest
-    )
-    $decision = Get-WorkshopJevDecision -TaskId $TaskId -DecisionType $DecisionType -TaskDescription $TaskDescription -SelectedSkill $SelectedSkill -SelectedRole $SelectedRole -Root $Root -Request $Request
-    if ($decision.reason -eq 'sandbox-tls' -and $ApprovedRequest) {
-        $decision = Get-WorkshopJevDecision -TaskId $TaskId -DecisionType $DecisionType -TaskDescription $TaskDescription -SelectedSkill $SelectedSkill -SelectedRole $SelectedRole -Root $Root -Request $ApprovedRequest
+        $watch.Stop(); Write-JevRoutingTelemetry -Root $Root -TaskId $TaskId -Decision $decision -LatencyMs $watch.ElapsedMilliseconds -Response $response
     }
     $decision
 }

@@ -87,7 +87,7 @@
       "expect": { "skill_invoked": ["workshop-foreman", "github-check-pr"], "skill_not_invoked": [] },
       "routing": { "skill": "github-check-pr", "agent": null, "model": null, "delegate": null },
       "pass_condition": "Consumes only a high-confidence allowlisted specialized-skill JEV recommendation; Foreman retains PR inspection and authorization boundaries and does not request later stages.",
-      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
+      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
     },
     {
       "id": "jev-pr-create",
@@ -96,7 +96,7 @@
       "expect": { "skill_invoked": ["workshop-foreman", "github-create-pr"], "skill_not_invoked": [] },
       "routing": { "skill": "github-create-pr", "agent": null, "model": null, "delegate": null },
       "pass_condition": "Consumes only a high-confidence allowlisted create-PR JEV recommendation from sanitized task semantics; Foreman retains authorization boundaries and does not request later stages.",
-      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
+      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
     },
     {
       "id": "jev-pr-merge",
@@ -105,7 +105,7 @@
       "expect": { "skill_invoked": ["workshop-foreman", "github-merge-pr"], "skill_not_invoked": [] },
       "routing": { "skill": "github-merge-pr", "agent": null, "model": null, "delegate": null },
       "pass_condition": "Consumes only a high-confidence allowlisted merge-PR JEV recommendation from sanitized task semantics; Foreman retains merge authorization and does not request later stages.",
-      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
+      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
     },
     {
       "id": "jev-substantive-task",
@@ -113,8 +113,8 @@
       "fixture": "clean-managed-repository",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
       "routing": { "skill": "none", "agent": "master-craftsman", "model": "gpt-5.6-luna", "delegate": true },
-      "pass_condition": "After no specialized skill applies, consumes high-confidence delegation, role, and independent cheapest-capable Luna recommendations from task semantics without changing the required isolated lifecycle and review.",
-      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, worktree lifecycle, checks, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
+      "pass_condition": "After no specialized skill applies, consumes high-confidence delegation, role, and independent least-capable/cheapest appropriate model recommendations from task semantics without changing the required isolated lifecycle and review.",
+      "trace": "attempted JEV stage decisions, accepted values/confidence, supplied tokens, latency, and Foreman lifecycle"
     },
     {
       "id": "jev-trivial-task",
@@ -123,7 +123,7 @@
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
       "routing": { "skill": "none", "agent": null, "model": null, "delegate": false },
       "pass_condition": "After no specialized skill applies, consumes a high-confidence non-delegation recommendation while Foreman performs the trivial direct edit without requesting role or model.",
-      "trace": "correlated task/stage JEV records, decision value/confidence, final Foreman decision, observed baseline and downstream task totals plus observed router tokens, latency, and outcome"
+      "trace": "attempted JEV stage decisions, accepted values/confidence, supplied tokens, latency, and Foreman decision"
     },
     {
       "id": "jev-fallback",
@@ -131,17 +131,8 @@
       "fixture": "offline-workshop",
       "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
       "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Uses existing Foreman judgment for any rejected stage, correlates fallback routing with final completion telemetry, and performs no network-dependent test action.",
-      "trace": "task/stage fallback reason, Foreman final route/delegation/role/model/outcome, observed baseline total, and null JEV-assisted total when counters are unavailable"
-    },
-    {
-      "id": "jev-sandbox-tls",
-      "prompt": "Make a task routing decision when restricted Windows execution returns the stable sandbox-tls reason.",
-      "fixture": "approved-network-workshop",
-      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
-      "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Runs JEV in the configured network-enabled context and retries the identical sanitized stage exactly once through approved network execution only after sandbox-tls; Foreman retains the escalation boundary and records separate same-task stage telemetry.",
-      "trace": "task ID, stable reason, two stage-call telemetry rows when retried, approved-network execution, and no retry for auth, context, malformed, low-confidence, or general outage failures"
+      "pass_condition": "Uses existing Foreman judgment for any rejected stage and performs no network-dependent test action.",
+      "trace": "attempted fallback stage, task ID, latency, and Foreman decision"
     },
     {
       "id": "fitter-pr",
