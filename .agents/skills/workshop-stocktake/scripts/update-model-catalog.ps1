@@ -91,36 +91,18 @@ $version = (& $CodexCommand --version 2>$null | Select-Object -First 1)
 if ([string]::IsNullOrWhiteSpace($version)) { throw 'Codex version discovery failed.' }
 $models = Get-CodexModels $CodexCommand | Sort-Object { $_.id }
 
-$rows = foreach ($model in $models) {
-    $capabilities = @()
-    if (Get-Property $model 'displayName') { $capabilities += "name: $(Get-Property $model 'displayName')" }
-    if (Get-Property $model 'description') { $capabilities += "description: $(Get-Property $model 'description')" }
-    if ($model.inputModalities) { $capabilities += "input: $($model.inputModalities -join ', ')" }
-    if (Get-Property $model 'defaultReasoningEffort') { $capabilities += "default reasoning: $(Get-Property $model 'defaultReasoningEffort')" }
-    if ($model.supportedReasoningEfforts) { $capabilities += "reasoning: $(($model.supportedReasoningEfforts | ForEach-Object reasoningEffort) -join ', ')" }
-    if (Get-Property $model 'defaultServiceTier') { $capabilities += "default tier: $(Get-Property $model 'defaultServiceTier')" }
-    if ($null -ne $model.multiAgentVersion) { $capabilities += "multi-agent: $($model.multiAgentVersion)" }
-    if ($model.serviceTiers) { $capabilities += "tiers: $(($model.serviceTiers | ForEach-Object id) -join ', ')" }
-    if (Get-Property $model 'modelSpecialty') { $capabilities += "specialty: $(Get-Property $model 'modelSpecialty')" }
-    if (Get-Property $model 'availableAccessPrograms') { $capabilities += "access: $((Get-Property $model 'availableAccessPrograms' | ConvertTo-Json -Compress))" }
-    if ($true -eq (Get-Property $model 'isDefault')) { $capabilities += 'default' }
-    if ($true -eq (Get-Property $model 'hidden')) { $capabilities += 'hidden' }
-    $provider = ConvertTo-Cell (Get-Property $model 'provider')
-    "| $(ConvertTo-Cell $model.id) | $provider | available to current Codex account | $(ConvertTo-Cell (Get-Property $model 'pricing')) | $(ConvertTo-Cell (Get-Property $model 'contextWindow')) | $(ConvertTo-Cell ($capabilities -join '; ')) | Codex app-server `model/list` |"
-}
-if (-not $rows) { $rows = '| none returned | unknown | none returned by current Codex account | unknown | unknown | unknown | Codex app-server `model/list` |' }
+$rows = foreach ($model in $models) { "| $(ConvertTo-Cell $model.id) | $(ConvertTo-Cell (Get-Property $model 'description')) | $(ConvertTo-Cell (Get-Property $model 'defaultReasoningEffort')) |" }
+if (-not $rows) { $rows = '| none returned | unknown | unknown |' }
 
 $body = @(
     '# Workshop model catalog'
     ''
-    'Observed inventory for Workshop. It is not model-selection policy.'
+    'Observed Codex inventory for routing input.'
     ''
     "Source: Codex app-server `model/list` via $version."
     ''
-    '## Models'
-    ''
-    '| Model | Provider | Availability | Pricing | Context limit | Relevant characteristics | Source |'
-    '|---|---|---|---|---|---|---|'
+    '| Model | Description | Default reasoning |'
+    '|---|---|---|'
     $rows
 ) -join "`n"
 $checked = [DateTime]::UtcNow.ToString('o')

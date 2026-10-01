@@ -29,8 +29,8 @@ if ($second.params.cursor -ne 'second') { throw 'pagination cursor required' }
     & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd')
     if ($LASTEXITCODE -ne 0) { throw 'Stocktake must complete the required handshake and pagination.' }
     $first = Get-Content -LiteralPath $catalog -Raw
-    if ($first -notmatch '\| model-a \| observed provider \| available to current Codex account \| observed pricing \| observed context \| name: Observed name; description: Observed description; input: text, image; default reasoning: medium; reasoning: medium; default tier: priority; multi-agent: v1; specialty: coding; default \|') { throw 'Stocktake must retain observed model metadata and explicit source fields.' }
-    if ($first -notmatch '\| model-c \| unknown \| available to current Codex account \| unknown \| unknown \| unknown \|') { throw 'Stocktake must render absent model metadata as unknown.' }
+    if ($first -notmatch '\| model-a \| Observed description \| medium \|') { throw 'Stocktake must retain the observed description and default reasoning.' }
+    if ($first -notmatch '\| model-c \| unknown \| unknown \|') { throw 'Stocktake must render absent compact fields as unknown.' }
     if ($first.IndexOf('model-a') -gt $first.IndexOf('model-b')) { throw 'Stocktake must sort model rows deterministically.' }
     & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd')
     if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Unchanged inventory must not rewrite its timestamp.' }
