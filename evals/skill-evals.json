@@ -135,6 +135,15 @@
       "trace": "task/stage fallback reason, Foreman final route/delegation/role/model/outcome, observed baseline total, and null JEV-assisted total when counters are unavailable"
     },
     {
+      "id": "jev-sandbox-tls",
+      "prompt": "Make a task routing decision when restricted Windows execution returns the stable sandbox-tls reason.",
+      "fixture": "approved-network-workshop",
+      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
+      "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
+      "pass_condition": "Runs JEV in the configured network-enabled context and retries the identical sanitized stage exactly once through approved network execution only after sandbox-tls; Foreman retains the escalation boundary and records separate same-task stage telemetry.",
+      "trace": "task ID, stable reason, two stage-call telemetry rows when retried, approved-network execution, and no retry for auth, context, malformed, low-confidence, or general outage failures"
+    },
+    {
       "id": "fitter-pr",
       "prompt": "Advance the supplied reviewed, verified change to its authorized pull-request gate.",
       "fixture": "reviewed-owning-worktree",

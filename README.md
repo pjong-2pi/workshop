@@ -52,6 +52,10 @@ sent to JEV and remains solely with Foreman. It sends only
 never sends the raw prompt or Foreman risk/effort classifications. It uses the fixed
 TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, and falls back to Foreman
 judgment on any unavailable, malformed, low-confidence, or disallowed result.
+Run JEV in the configured network-enabled context. Only a returned `sandbox-tls`
+reason permits Foreman to retry the identical sanitized stage once through approved
+network execution via its explicit `ApprovedJevExecution` callback; the helper never
+requests escalation; every call is a separate telemetry row under the same task ID.
 Ignored `.local/jev-routing.jsonl` correlates each task/stage with the
 Foreman's final decision and explicit observed baseline comparison; JEV-assisted
 totals are null unless both explicit observed downstream and router counters exist.

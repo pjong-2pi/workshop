@@ -24,7 +24,7 @@ trivial/substantive work, or well-defined/demanding work:
 . (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
 $JevTaskId = [guid]::NewGuid()
 $TaskDescription = 'inspect pull request' # 160 chars max; lowercase words from the bounded semantic vocabulary
-$SkillDecision = Get-WorkshopJevDecision -TaskId $JevTaskId -DecisionType Skill -TaskDescription $TaskDescription -Root $WorkshopRoot
+$SkillDecision = Get-WorkshopJevDecisionWithApprovedRetry -TaskId $JevTaskId -DecisionType Skill -TaskDescription $TaskDescription -Root $WorkshopRoot -ApprovedRequest $ApprovedJevExecution
 ```
 
 Use only the helper's small allowlisted routing vocabulary (for example `create`,
@@ -48,7 +48,14 @@ decisions.
 
 The helper reads only `TYPESAFE_API_KEY` from the process environment, applies a
 bounded API call and confidence/current-capability validation, and records ignored
-local per-task, per-stage telemetry. Stocktake remains inventory-only. Do not run
+local per-task, per-stage telemetry. Run JEV in the configured network-enabled
+context. If and only if a stage returns `sandbox-tls`, Foreman may retry that
+identical sanitized stage once through approved network execution, retaining the
+same task ID; the retry is a separately observed stage call. Do not retry low
+confidence, malformed/invalid choices, authentication failures, context rejection,
+or general outages. `ApprovedJevExecution` is Foreman's explicit approved execution
+callback; the helper never requests sandbox escalation. Foreman remains authoritative
+for that tool boundary. Stocktake remains inventory-only. Do not run
 it in deterministic tests with network credentials. At the user-facing gate,
 including fallback, blocked, and error paths, close the task in `finally`:
 
