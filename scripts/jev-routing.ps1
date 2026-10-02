@@ -14,18 +14,18 @@ function Write-JevRoutingTelemetry {
 function Get-WorkshopJevDecision {
     param(
         [Parameter(Mandatory)][guid] $TaskId,
-        [Parameter(Mandatory)][ValidateSet('skill', 'delegation', 'role', 'model')][string] $DecisionType,
-        [Parameter(Mandatory)][string] $TaskDescription, [string] $SelectedSkill, [string] $SelectedRole,
+        [Parameter(Mandatory)][ValidateSet('skill', 'role', 'model')][string] $DecisionType,
+        [Parameter(Mandatory)][string] $TaskDescription, [string] $SelectedRole,
         [Parameter(Mandatory)][string] $Root, [scriptblock] $Request
     )
     $floor = 0.40
-    $allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr'); delegation = @('true', 'false'); role = @('master-craftsman', 'inspector', 'master-inspector') }
+    $allowed = @{ skill = @('none', 'workshop-setup', 'workshop-clear-bench', 'github-create-pr', 'github-check-pr', 'github-merge-pr'); role = @('master-craftsman', 'inspector', 'master-inspector') }
     $watch = [Diagnostics.Stopwatch]::StartNew(); $response = $null
     try {
         if ($TaskDescription.Length -gt 160 -or $TaskDescription -match '[\r\n]' -or $TaskDescription -notmatch '^[\p{L}\p{N}][\p{L}\p{N} .,;:()&''""/+-]*$') { throw 'Task description is not sanitized.' }
-        if (($DecisionType -eq 'delegation' -and $SelectedSkill -ne 'none') -or ($DecisionType -eq 'model' -and $SelectedRole -notin $allowed.role) -or ($DecisionType -notin @('delegation', 'model') -and ($SelectedSkill -or $SelectedRole)) -or ($DecisionType -eq 'delegation' -and $SelectedRole) -or ($DecisionType -eq 'model' -and $SelectedSkill)) { throw 'Stage context is invalid.' }
-        $instructions = @{ skill = 'Select an applicable specialized workflow skill only. Never select workshop-foreman; choose none otherwise.'; delegation = 'Recommend whether remaining work is implementation requiring a worker, or orchestration/read-only work Foreman may handle.'; role = 'Choose Master Craftsman for implementation or investigation, Inspector when routine independent review adds value, or Master Inspector for high-risk review.'; model = 'Choose the lowest-resource model and reasoning pair likely to reliably complete the task.' }
-        $criteria = @{ skill = @{ none = 'No specialized skill applies.'; 'workshop-setup' = 'Explicit first-time Workshop bootstrap.'; 'workshop-clear-bench' = 'Explicit cleanup of a completed Herdr workspace.'; 'github-create-pr' = 'Create a pull request after authorization.'; 'github-check-pr' = 'Inspect an exact pull request.'; 'github-merge-pr' = 'Merge an exact pull request after authorization.' }; delegation = @{ true = 'Implementation always requires a worker.'; false = 'Orchestration or read-only work Foreman may handle.' }; role = @{ 'master-craftsman' = 'Implementation or investigation.'; inspector = 'Routine review.'; 'master-inspector' = 'High-risk review.' } }
+        if (($DecisionType -eq 'model' -and $SelectedRole -notin $allowed.role) -or ($DecisionType -ne 'model' -and $SelectedRole)) { throw 'Stage context is invalid.' }
+        $instructions = @{ skill = 'Select an applicable specialized workflow skill only. Never select workshop-foreman; choose none otherwise.'; role = 'Choose Master Craftsman for implementation or investigation, Inspector when routine independent review adds value, or Master Inspector for high-risk review.'; model = 'Choose the lowest-resource model and reasoning pair likely to reliably complete the task.' }
+        $criteria = @{ skill = @{ none = 'No specialized skill applies.'; 'workshop-setup' = 'Explicit first-time Workshop bootstrap.'; 'workshop-clear-bench' = 'Explicit cleanup of a completed Herdr workspace.'; 'github-create-pr' = 'Create a pull request after authorization.'; 'github-check-pr' = 'Inspect an exact pull request.'; 'github-merge-pr' = 'Merge an exact pull request after authorization.' }; role = @{ 'master-craftsman' = 'Implementation or investigation.'; inspector = 'Routine review.'; 'master-inspector' = 'High-risk review.' } }
         if ($DecisionType -eq 'model') {
             $criteria.model = @{}
             foreach ($line in Get-Content -LiteralPath (Join-Path $Root 'catalog/models.md') -ErrorAction Stop) {
@@ -41,13 +41,12 @@ function Get-WorkshopJevDecision {
             $allowed.model = @($criteria.model.Keys)
         }
         $state = "decision=$DecisionType;task=$TaskDescription"
-        if ($DecisionType -eq 'delegation') { $state += ';selected_skill=none' }
         if ($DecisionType -eq 'model') { $state += ";selected_role=$SelectedRole" }
         $body = @{ state = $state; model = 'jev-latest'; questions = @{ decision = @{ type = 'choice'; instructions = $instructions[$DecisionType]; criteria = $criteria[$DecisionType] } } } | ConvertTo-Json -Depth 8 -Compress
         if ($Request) { $response = & $Request $body } else { $response = Invoke-RestMethod -Method Post -Uri 'https://api.typesafe.ai/v1/systemone' -Headers @{ Authorization = "Bearer $env:TYPESAFE_API_KEY" } -ContentType 'application/json' -Body $body -TimeoutSec 5 }
         $answer = $response.answers.decision
         if (-not (Test-JevChoice $answer $allowed[$DecisionType] $floor)) { throw 'Response is not an accepted choice.' }
-        $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = if ($DecisionType -eq 'delegation') { [Convert]::ToBoolean($answer.choice) } elseif ($DecisionType -eq 'model') { $pair = $answer.choice -split '@', 2; [PSCustomObject]@{ model = $pair[0]; reasoning = $pair[1] } } else { $answer.choice }; source = 'jev'; task_id = $TaskId }
+        $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = if ($DecisionType -eq 'model') { $pair = $answer.choice -split '@', 2; [PSCustomObject]@{ model = $pair[0]; reasoning = $pair[1] } } else { $answer.choice }; source = 'jev'; task_id = $TaskId }
     } catch {
         $decision = [PSCustomObject]@{ decision_type = $DecisionType; value = $null; source = 'foreman-fallback'; task_id = $TaskId }
     } finally {

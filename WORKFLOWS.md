@@ -14,7 +14,7 @@ infrastructure only when repeated real usage shows a material reliability benefi
 | Dispatch Herdr work | 3 | Installed CLI rejects both workspace and CWD selectors on creation. An internal sub-agent did implementation after workspace creation, leaving no visible Codex worker in its pane. | Create from CWD, then start and prompt an actual Herdr Codex session; workspace creation alone is not dispatch. Consult help only on drift. |
 | Clear completed work | 8 | Repeated validation and auxiliary disposal still encountered Windows directory locks. | Verify intended clean linked worktree and completion/discard, then normal Herdr cleanup; report failures for later without recovery machinery. |
 | Evaluate Workshop | 3 | Exact prose/CLI tests froze incidental implementation instead of proving outcomes. | Keep metadata/syntax/authority invariants and representative outcome definitions; no universal maximal checks or repeated release passes. |
-| Advise routing with JEV | 5 | Sanitized task text, current choices, confidence checks and ordinary fallback suffice. | Keep existing staged helper with one observed model@reasoning choice; no new orchestration infrastructure. |
+| Advise routing with JEV | 5 | Sanitized task text, current choices, confidence checks and ordinary fallback suffice. | Keep the skill/role/model helper with one observed model@reasoning choice; no new orchestration infrastructure. |
 | Inventory Codex models | 2 | Available models are account-specific. | Keep on-demand `workshop-stocktake` inventory; defer scheduling and ranking. |
 
 A single hiccup is evidence, not a mandate for a validator, state machine, skill,

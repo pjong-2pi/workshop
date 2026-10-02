@@ -6,15 +6,14 @@ $root = Join-Path ([IO.Path]::GetTempPath()) "workshop-jev-test-$([guid]::NewGui
 try {
     New-Item -ItemType Directory -Path (Join-Path $root 'catalog') -Force | Out-Null
     @('| Model | Description | Default reasoning | Supported reasoning |', '|---|---|---|---|', '| model-small | Fast \| affordable. | low | low |', '| model-large | Demanding work. | high | medium, high |') | Set-Content -LiteralPath (Join-Path $root 'catalog/models.md')
-    $calls = [Collections.Generic.List[object]]::new(); $responses = [Collections.Generic.Queue[object]]@((New-Response none), (New-Response true), (New-Response master-craftsman), (New-Response model-small@low))
+    $calls = [Collections.Generic.List[object]]::new(); $responses = [Collections.Generic.Queue[object]]@((New-Response none), (New-Response master-craftsman), (New-Response model-small@low))
     $request = { param($body) $calls.Add((ConvertFrom-Json $body)); $responses.Dequeue() }
     $task = [guid]::NewGuid()
     $skill = Get-WorkshopJevDecision -TaskId $task -DecisionType skill -TaskDescription 'Review pull request 42' -Root $root -Request $request
-    $delegation = Get-WorkshopJevDecision -TaskId $task -DecisionType delegation -TaskDescription 'Review pull request 42' -SelectedSkill none -Root $root -Request $request
     $role = Get-WorkshopJevDecision -TaskId $task -DecisionType role -TaskDescription 'Review pull request 42' -Root $root -Request $request
     $model = Get-WorkshopJevDecision -TaskId $task -DecisionType model -TaskDescription 'Review pull request 42' -SelectedRole master-craftsman -Root $root -Request $request
-    Assert-True ($skill.value -eq 'none' -and $delegation.value -and $role.value -eq 'master-craftsman' -and $model.value.model -eq 'model-small' -and $model.value.reasoning -eq 'low' -and $calls.Count -eq 4) 'Staged accepted choices must proceed independently with one model/reasoning request.'
-    Assert-True ($calls[3].questions.decision.criteria.'model-small@low' -match 'Fast \\| affordable' -and $calls[3].questions.decision.instructions -match 'lowest-resource') 'Model choice must retain escaped-pipe descriptions in observed model/reasoning combinations.'
+    Assert-True ($skill.value -eq 'none' -and $role.value -eq 'master-craftsman' -and $model.value.model -eq 'model-small' -and $model.value.reasoning -eq 'low' -and $calls.Count -eq 3) 'Accepted skill, role, and model/reasoning choices must use exactly three calls.'
+    Assert-True ($calls[2].questions.decision.criteria.'model-small@low' -match 'Fast \\| affordable' -and $calls[2].questions.decision.instructions -match 'lowest-resource') 'Model choice must retain escaped-pipe descriptions in observed model/reasoning combinations.'
     $stopped = Get-WorkshopJevDecision -TaskId ([guid]::NewGuid()) -DecisionType skill -TaskDescription 'Create a pull request' -Root $root -Request { param($body) New-Response github-create-pr }
     Assert-True ($stopped.value -eq 'github-create-pr') 'A specialized skill may stop later stages.'
     $fallback = Get-WorkshopJevDecision -TaskId ([guid]::NewGuid()) -DecisionType skill -TaskDescription 'Fix service endpoint' -Root $root -Request { param($body) New-Response github-check-pr 0.39 }

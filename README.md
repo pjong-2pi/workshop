@@ -46,9 +46,9 @@ pwsh -NoProfile -File tests/run.ps1
 
 ## Routing and diagnostics
 
-JEV cheaply advises skill, delegation, role, then one `model@reasoning` pair
-where applicable. The existing helper validates allowlisted choices and falls
-back to Foreman judgment; advice never permits Foreman implementation.
+JEV cheaply advises skill, role, then one `model@reasoning` pair where applicable.
+The existing helper validates allowlisted choices and falls back to Foreman
+judgment; advice never permits Foreman implementation.
 It sends only a sanitized single-line task description of at most 160 characters,
 never request/code contents, secrets, or authorization. Model advice uses the
 compact current `catalog/models.md`; authorization remains with Foreman.

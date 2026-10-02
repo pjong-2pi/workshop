@@ -41,11 +41,10 @@ $TaskId = [guid]::NewGuid()
 $decision = Get-WorkshopJevDecision -TaskId $TaskId -DecisionType skill -TaskDescription 'inspect pull request' -Root $WorkshopRoot
 ```
 
-Ask Skill first. For remaining implementation, Foreman always delegates; the
-Delegation advice cannot authorize direct Foreman implementation and is useful
-only for orchestration or read-only work. After implementation delegation, ask
-Role, then Model with `-SelectedRole`. The final Model call selects one observed
-`model@reasoning` pair from the compact `catalog/models.md`.
+Ask Skill first. Foreman always delegates remaining implementation; read-only or
+orchestration work may remain with Foreman. For a worker, ask Role, then Model
+with `-SelectedRole`. The final Model call selects one observed `model@reasoning`
+pair from the compact `catalog/models.md`.
 Unavailable or rejected advice falls back to Foreman judgment; stop later stages.
 JEV is advisory and never controls authorization, readiness, or orchestration.
 The Fitter is selected by Foreman at the PR gate, outside general JEV routing.
