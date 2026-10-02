@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $skills = @('workshop-foreman', 'workshop-setup', 'workshop-clear-bench', 'workshop-stocktake', 'github-create-pr', 'github-check-pr', 'github-merge-pr')
-$profiles = @('master-craftsman', 'inspector', 'master-inspector', 'pr-worker')
+$profiles = @('master-craftsman', 'inspector', 'master-inspector', 'fitter')
 $required = @('AGENTS.md', 'README.md', 'WORKFLOWS.md', '.gitignore', '.codex/config.toml', 'catalog/models.md',
     'scripts/setup.ps1', 'scripts/check-environment.ps1', 'scripts/jev-routing.ps1', 'tests/run.ps1',
     '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1',
@@ -25,7 +25,6 @@ foreach ($profile in $profiles) {
     $sandbox = if ($profile -in @('inspector', 'master-inspector')) { 'read-only' } else { 'workspace-write' }
     if ($content -notmatch ('sandbox_mode\s*=\s*"{0}"' -f $sandbox)) { throw "Unexpected sandbox: $profile" }
 }
-
 # Parse scripts without executing external tools or imposing implementation details.
 $scriptPaths = @('scripts', 'tests', '.agents/skills') | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $root $_) -Filter *.ps1 -Recurse }
 foreach ($script in $scriptPaths) {

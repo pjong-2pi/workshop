@@ -91,8 +91,11 @@ $version = (& $CodexCommand --version 2>$null | Select-Object -First 1)
 if ([string]::IsNullOrWhiteSpace($version)) { throw 'Codex version discovery failed.' }
 $models = Get-CodexModels $CodexCommand | Sort-Object { $_.id }
 
-$rows = foreach ($model in $models) { "| $(ConvertTo-Cell $model.id) | $(ConvertTo-Cell (Get-Property $model 'description')) | $(ConvertTo-Cell (Get-Property $model 'defaultReasoningEffort')) |" }
-if (-not $rows) { $rows = '| none returned | unknown | unknown |' }
+$rows = foreach ($model in $models) {
+    $supported = @((Get-Property $model 'supportedReasoningEfforts') | ForEach-Object { if ($null -ne $_) { Get-Property $_ 'reasoningEffort' } } | Where-Object { -not [string]::IsNullOrWhiteSpace([string] $_) }) -join ', '
+    "| $(ConvertTo-Cell $model.id) | $(ConvertTo-Cell (Get-Property $model 'description')) | $(ConvertTo-Cell (Get-Property $model 'defaultReasoningEffort')) | $(ConvertTo-Cell $supported) |"
+}
+if (-not $rows) { $rows = '| none returned | unknown | unknown | unknown |' }
 
 $body = @(
     '# Workshop model catalog'
@@ -101,8 +104,8 @@ $body = @(
     ''
     "Source: Codex app-server `model/list` via $version."
     ''
-    '| Model | Description | Default reasoning |'
-    '|---|---|---|'
+    '| Model | Description | Default reasoning | Supported reasoning |'
+    '|---|---|---|---|'
     $rows
 ) -join "`n"
 $checked = [DateTime]::UtcNow.ToString('o')

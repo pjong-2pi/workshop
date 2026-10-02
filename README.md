@@ -4,16 +4,16 @@ A portable workspace for coordinating Codex agents inside Herdr. Managed
 repositories own their instructions, dependencies, verification, and Git history.
 
 Use the minimum orchestration, implementation, testing, and review necessary for
-the task. Small tasks stay small; substantive delegated work uses isolated
+the task. All implementation delegates; substantive delegated work uses isolated
 worktrees; high-risk changes receive independent review. Foreman owns the request
-and readiness decision. A cheap PR worker performs authorized GitHub mechanics.
+and readiness decision. A cheap Fitter performs authorized GitHub mechanics.
 
 ```text
 User -> Foreman (optional JEV advice)
-          -> direct work or implementation worker
+          -> implementation worker
           -> proportional verification
           -> independent reviewer when warranted
-          -> PR worker -> github-create-pr
+          -> Fitter -> github-create-pr
 ```
 
 Merge requires explicit authorization and uses `github-merge-pr`. Cleanup is
@@ -46,12 +46,13 @@ pwsh -NoProfile -File tests/run.ps1
 
 ## Routing and diagnostics
 
-JEV cheaply advises skill, delegation, role, then model where applicable. The
-existing helper validates allowlisted choices and falls back to Foreman judgment.
+JEV cheaply advises skill, delegation, role, then one `model@reasoning` pair
+where applicable. The existing helper validates allowlisted choices and falls
+back to Foreman judgment; advice never permits Foreman implementation.
 It sends only a sanitized single-line task description of at most 160 characters,
 never request/code contents, secrets, or authorization. Model advice uses the
 compact current `catalog/models.md`; authorization remains with Foreman.
-The PR worker is dispatched at the PR gate, outside general routing.
+The Fitter is dispatched at the PR gate, outside general routing.
 
 Ignored `.local/jev-routing.jsonl` contains attempted decision metadata, not task
 text. Optional `.local/orchestration-hiccups.jsonl` contains brief sanitized
@@ -64,7 +65,7 @@ managed policy may override it.
 ## Layout and evaluation
 
 - `.agents/skills/`: Foreman, bootstrap, cleanup, inventory, and GitHub mechanics.
-- `.codex/agents/`: implementation, optional reviewers, and cheap PR worker.
+- `.codex/agents/`: implementation, optional reviewers, and cheap Fitter.
 - `scripts/`: bootstrap, environment checks, and advisory JEV helper.
 - `catalog/models.md`: observed model inventory.
 - `tests/`: structural invariants and existing disposable behavior checks.

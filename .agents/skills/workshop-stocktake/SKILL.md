@@ -14,7 +14,7 @@ pwsh -NoProfile -File .agents/skills/workshop-stocktake/scripts/update-model-cat
 The script queries Codex's local app-server `model/list` capability for the
 current account, then updates `catalog/models.md` only when inventory facts
 change. The compact catalog records model, observed description, observed default
-reasoning, and last checked time. Do not add guesses, scrape non-authoritative
+and supported reasoning efforts, and last checked time. Do not add guesses, scrape non-authoritative
 sources, or turn this inventory into model-selection policy.
 
 If discovery fails, leave the existing catalog intact and report the failure.

@@ -10,7 +10,7 @@ disposable suite remains available as `tests/run.ps1`.
 
 `skill-evals.json` contains representative outcome-level definitions:
 
-- Small tasks use direct work or cheap delegation, focused checks, and PR mechanics.
+- Small implementation tasks use cheap delegation, focused checks, and Fitter PR mechanics.
 - Normal implementation delegates substantive work and reviews only when useful.
 - Risky changes receive stronger independent review and regression evidence.
 - Authorized repository changes reach a scoped verified PR.

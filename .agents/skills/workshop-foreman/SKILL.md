@@ -1,19 +1,20 @@
 ---
 name: workshop-foreman
-description: Coordinate managed development with the minimum sufficient workflow, isolated delegated work, proportional verification and review, and a separate PR worker.
+description: Coordinate managed development with the minimum sufficient workflow, isolated delegated work, proportional verification and review, and a separate Fitter.
 ---
 
 # Workshop Foreman
 
-Own the request, authorization, and user-facing result. Use the minimum sufficient
-workflow for the requested change. Complexity must come from the task, not from
-available agents or tools.
+Own the request, authorization, and user-facing result. Foreman is available to
+the user but orchestration-only: never implement, including a typo or other small
+work. Workers implement. Use the minimum sufficient workflow for the requested
+change. Complexity must come from the task, not from available agents or tools.
 
 ## Choose the workflow
 
-- Trivial/small change: work directly or use a cheap worker, run targeted checks,
-  then send the completed change to the PR worker.
-- Normal implementation: use one implementation worker and appropriate checks.
+- Trivial/small implementation: use a cheap worker and a minimal relevant check,
+  then send the completed change to the Fitter.
+- Normal implementation: use one appropriate implementation worker and checks.
   Add an Inspector only when independent review adds meaningful value.
 - High-risk implementation: use an implementation worker, appropriate checks,
   and a Master Inspector. Fix material findings and re-review the affected scope.
@@ -40,12 +41,14 @@ $TaskId = [guid]::NewGuid()
 $decision = Get-WorkshopJevDecision -TaskId $TaskId -DecisionType skill -TaskDescription 'inspect pull request' -Root $WorkshopRoot
 ```
 
-Ask Skill first; if work remains, Delegation with `-SelectedSkill none`; after
-accepted delegation, Role, then Model with `-SelectedRole`. The helper validates
-choices against current allowlists and the compact `catalog/models.md`.
+Ask Skill first. For remaining implementation, Foreman always delegates; the
+Delegation advice cannot authorize direct Foreman implementation and is useful
+only for orchestration or read-only work. After implementation delegation, ask
+Role, then Model with `-SelectedRole`. The final Model call selects one observed
+`model@reasoning` pair from the compact `catalog/models.md`.
 Unavailable or rejected advice falls back to Foreman judgment; stop later stages.
 JEV is advisory and never controls authorization, readiness, or orchestration.
-The PR worker is selected by Foreman at the PR gate, outside general JEV routing.
+The Fitter is selected by Foreman at the PR gate, outside general JEV routing.
 
 ## Prepare and dispatch
 
@@ -76,8 +79,7 @@ If an explicit writable worktree path needs ignoring, use local
 Prefer applicable target profiles, otherwise Workshop's generic profiles.
 Herdr does not load Codex profiles automatically: pass the profile sandbox,
 model, reasoning, and developer instructions. Accepted JEV model advice overrides
-only the model for that invocation; otherwise use the profile defaults, choosing
-a cheaper adequate model/reasoning for small work when available.
+both model and reasoning for that invocation; otherwise use the profile defaults.
 
 Give the worker the outcome, owned files/scope, dependencies, checks, non-goals,
 and stopping gate. Workers stay within their assigned scope and preserve others'
@@ -107,7 +109,7 @@ the implementation worker, then run affected checks and focused re-review.
 ## Create the PR and finish
 
 Foreman decides when the implementation is ready. Once the writer has stopped,
-dispatch `pr-worker` on the completed worktree with repository/worktree, base,
+dispatch `fitter` on the completed worktree with repository/worktree, base,
 branch, approved change scope, verification evidence, and authorization.
 It uses `github-create-pr`, returns the PR URL and head SHA, and stops.
 Do not ask it to review code or perform another engineering pass.

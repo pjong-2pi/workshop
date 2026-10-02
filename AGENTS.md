@@ -22,6 +22,8 @@ real workflow needs them.
 
 - The Foreman owns intake, delegation, monitoring, verification, review, and
   the user-facing result.
+- All implementation belongs to delegated workers; Foreman remains
+  orchestration-only.
 - Substantive delegated edits belong in dedicated worker worktrees.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
