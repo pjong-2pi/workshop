@@ -117,12 +117,67 @@
       "fixture": "approved-mergeable-pull-request",
       "expect": {
         "skill_invoked": [
-          "github-merge-pr"
+          "github-merge-pr",
+          "workshop-clear-bench"
         ],
         "skill_not_invoked": []
       },
       "pass_condition": "Verifies the intended PR and fresh head/checks/reviews, respects repository protection, confirms merge, and keeps branch deletion separate.",
       "trace": "authorization, verified SHA, protection and merge result"
+    },
+    {
+      "id": "contextual-merge-approval",
+      "prompt": "LGTM!",
+      "fixture": "one-current-verified-pull-request-awaiting-decision",
+      "expect": {
+        "skill_invoked": [
+          "github-merge-pr"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Treats clear contextual approval as authorization only for the one current unambiguous PR, then verifies its fresh exact head, checks, and protection before merging and normal postmerge cleanup.",
+      "trace": "current PR identity, approval context, verification, merge result, and cleanup"
+    },
+    {
+      "id": "ambiguous-merge-approval",
+      "prompt": "looks good",
+      "fixture": "ambiguous-pull-request-context",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": [
+          "github-merge-pr"
+        ]
+      },
+      "pass_condition": "Requests clarification rather than inferring which PR may merge.",
+      "trace": "ambiguous PR context and no merge action"
+    },
+    {
+      "id": "visible-worker-dispatch",
+      "prompt": "Implement the specified change.",
+      "fixture": "ready-visible-codex-worker",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Prompts only after the expected Codex worker has matching pane/workspace identity, readiness, and session evidence.",
+      "trace": "worker name, kind, pane, workspace, readiness, session, and prompt"
+    },
+    {
+      "id": "failed-visible-worker-dispatch",
+      "prompt": "Implement the specified change.",
+      "fixture": "missing-visible-codex-worker",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Stops and reports the failed visible-session invariant without prompting or substituting an internal agent.",
+      "trace": "start/get evidence and stopped dispatch"
     },
     {
       "id": "unrelated-user-work",
@@ -176,8 +231,8 @@
         ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Removes only the intended clean linked worktree after exact merged PR/base/head evidence or explicit discard; tool/OS failure is reported and left for later without forced recovery or invalidating the completed PR.",
-      "trace": "identity, status, disposition, normal removal result"
+      "pass_condition": "After exact merged PR/base/head evidence or explicit discard, closes only supplied associated task auxiliaries and removes the intended clean linked worktree; tool/OS failure is reported and left for later without forced recovery or invalidating the completed PR.",
+      "trace": "identity, status, disposition, supplied auxiliaries, and normal removal result"
     },
     {
       "id": "stocktake-models",

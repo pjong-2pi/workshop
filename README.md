@@ -16,8 +16,10 @@ User -> Foreman (optional JEV advice)
           -> Fitter -> github-create-pr
 ```
 
-Merge requires explicit authorization and uses `github-merge-pr`. Cleanup is
-safe and best-effort; a directory held by Windows can be left for later.
+Merge uses `github-merge-pr`; after one unambiguous current PR awaits a decision,
+clear contextual approval may authorize that PR unless a no-merge constraint
+remains. Cleanup closes only Foreman-known task auxiliaries, then is safe and
+best-effort; a directory held by Windows can be left for later.
 
 ## Getting started
 

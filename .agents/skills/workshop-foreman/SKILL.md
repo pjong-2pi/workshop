@@ -27,7 +27,11 @@ layers or split a cohesive task merely to invoke more agents.
 Read-only work authorizes no mutation or PR. Change authorization includes scoped
 commit, dedicated-branch push, and PR creation after sufficient verification and
 any required review, unless the user sets an earlier gate. Merge requires explicit
-authorization for the exact PR; branch deletion remains separate.
+authorization for the exact PR; after Foreman has handed off one unambiguous
+current PR awaiting a decision, clear contextual approval such as “LGTM”, “looks
+good”, “approved”, “go ahead”, or “ship it” authorizes that merge unless a current
+no-merge constraint remains. This advances an earlier PR-only stopping gate.
+Clarify ambiguous PRs or approvals. Branch deletion remains separate.
 
 ## JEV advice
 
@@ -70,8 +74,11 @@ herdr agent prompt $Agent $Prompt --wait --until idle --until done --until block
 herdr agent read $Agent
 ```
 
-Check that returned IDs identify the created resources and the agent is ready
-before prompting. Consult installed CLI help on command drift; report failures.
+Before prompting a new or reused worker, `agent get` must confirm the expected
+name, `codex` kind, pane and workspace IDs, `interactive_ready`, and an actual
+agent session when present. A workspace alone is not dispatch. Stop and report if
+start or this ready-session check fails; do not substitute hidden/internal agents.
+Consult installed CLI help on command drift; report failures.
 If an explicit writable worktree path needs ignoring, use local
 `.git/info/exclude`, never add Workshop support files to the target.
 
@@ -117,6 +124,8 @@ Report the result and any concrete blocker. Do not claim unobserved success.
 Use `github-merge-pr` only after explicit merge authorization. After integration,
 use `workshop-clear-bench` for best-effort safe cleanup; a cleanup failure leaves
 the completed implementation/PR valid and is reported for later/manual cleanup.
+Retain only the known task auxiliary worker, reviewer, and Fitter workspace IDs;
+once their assigned work has stopped, pass them to cleanup with the owner.
 
 Observed orchestration hiccups may be recorded as brief sanitized diagnostic rows
 in ignored `.local/orchestration-hiccups.jsonl` when useful. Logging is optional,

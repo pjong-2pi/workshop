@@ -5,7 +5,8 @@ param(
     [string]$GitHubRepository,
     [string]$PullRequest,
     [string]$Base,
-    [string]$DiscardAuthorization
+    [string]$DiscardAuthorization,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9_-]*$')][string[]]$AuxiliaryWorkspace
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,7 @@ if (($mergeParameterCount -notin @(0, 3)) -or (($mergeParameterCount -eq 3) -eq 
     throw 'Provide GitHub repository, pull request, and base for a verified merge, or -DiscardAuthorization.'
 }
 if ($mergeParameterCount -eq 3 -and $PullRequest -notmatch '^[1-9][0-9]*$') { throw 'Pull request must be a positive numeric ID.' }
+if (@($AuxiliaryWorkspace | Where-Object { $_ -ceq $Workspace }).Count) { throw 'Owning workspace cannot be an auxiliary workspace.' }
 
 $Repository = (Resolve-Path -LiteralPath $Repository).Path
 $metadata = & herdr workspace get $Workspace
@@ -59,7 +61,20 @@ if ($mergeParameterCount -eq 3) {
     }
 }
 
+foreach ($auxiliary in @($AuxiliaryWorkspace | Select-Object -Unique)) {
+    $panes = & herdr pane list --workspace $auxiliary
+    if ($LASTEXITCODE -ne 0) { throw "Could not inspect auxiliary workspace '$auxiliary'." }
+    $matches = @(($panes | Out-String | ConvertFrom-Json).result.panes)
+    if (-not $matches.Count -or @($matches | Where-Object { $_.workspace_id -cne $auxiliary -or [string]::IsNullOrWhiteSpace($_.cwd) -or (Resolve-Path -LiteralPath $_.cwd).Path -ine $worktree -or $_.agent -cne 'codex' -or [string]::IsNullOrWhiteSpace($_.agent_session) -or $_.agent_status -notin @('idle', 'done', 'blocked') }).Count) {
+        throw "Auxiliary workspace '$auxiliary' is not a stopped Codex task workspace for the owning worktree."
+    }
+}
+
 if ($PSCmdlet.ShouldProcess($worktree, 'remove completed Herdr worktree')) {
+    foreach ($auxiliary in @($AuxiliaryWorkspace | Select-Object -Unique)) {
+        & herdr workspace close $auxiliary
+        if ($LASTEXITCODE -ne 0) { throw "Cleanup failed for auxiliary '$auxiliary'; leave it for later/manual cleanup. Completed implementation or PR remains valid." }
+    }
     & herdr worktree remove --workspace $Workspace --trust-repository
     if ($LASTEXITCODE -ne 0) {
         throw "Cleanup failed for '$Workspace'; leave it for later/manual cleanup. Completed implementation or PR remains valid."
