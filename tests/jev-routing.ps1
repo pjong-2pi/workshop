@@ -21,6 +21,10 @@ try {
     $unsafe = Get-WorkshopJevDecision -TaskId ([guid]::NewGuid()) -DecisionType skill -TaskDescription "Fix`nendpoint" -Root $root -Request { throw 'must not run' }
     $failed = Get-WorkshopJevDecision -TaskId ([guid]::NewGuid()) -DecisionType skill -TaskDescription 'Fix service endpoint' -Root $root -Request { throw 'network failure' }
     Assert-True ($fallback.source -eq 'foreman-fallback' -and $unsafe.source -eq 'foreman-fallback' -and $failed.source -eq 'foreman-fallback') 'Unsafe, low-confidence, and failed decisions must use ordinary fallback.'
+    foreach ($forbiddenRole in @('foreman', 'pr-worker')) {
+        $rejected = Get-WorkshopJevDecision -TaskId ([guid]::NewGuid()) -DecisionType role -TaskDescription 'Fix service endpoint' -Root $root -Request { param($body) New-Response $forbiddenRole }
+        Assert-True ($rejected.source -eq 'foreman-fallback') 'JEV must not choose orchestration or PR mechanics roles.'
+    }
     $telemetry = Get-Content -LiteralPath (Join-Path $root '.local/jev-routing.jsonl') -Raw
     Assert-True ($telemetry -notmatch 'Review pull request|Fix service endpoint|network failure' -and $telemetry -match '"accepted":true' -and $telemetry -match '"latency_ms":') 'Telemetry must be per decision and private.'
 } finally { Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction Ignore }

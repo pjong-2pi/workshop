@@ -8,6 +8,9 @@ architecture, verification commands, dependencies, and Git history.
 
 ## Current scope
 
+Use the minimum orchestration, implementation, testing, and review necessary for
+the task. Do not introduce infrastructure or ceremony without a concrete need.
+
 The current milestone is the Codex + Herdr `workshop-foreman` MVP. Read the target
 repository's applicable `AGENTS.md` before dispatching work there. Target-project
 instructions override Workshop's generic worker defaults for work in that target.
@@ -19,13 +22,13 @@ real workflow needs them.
 
 - The Foreman owns intake, delegation, monitoring, verification, review, and
   the user-facing result.
-- Substantive target-project edits belong in dedicated worker worktrees.
+- Substantive delegated edits belong in dedicated worker worktrees.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
   authorization required by the target repository and the user.
 - A request authorizing repository changes also authorizes committing its scoped
   changes, pushing its dedicated branch, and creating a PR after required
-  verification and review, unless the user sets an earlier stopping gate or says
+  proportionate verification and any required review, unless the user sets an earlier stopping gate or says
   not to create a PR. Read-only work does not authorize mutation or a PR; PR
   creation does not authorize merge or branch deletion.
 - Keep machine paths, secrets, cloned projects, worktrees, and raw eval runs out
