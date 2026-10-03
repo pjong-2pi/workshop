@@ -8,7 +8,7 @@ The first version must let Workshop add to and modify itself through a workflow 
 
 ## Requirements Baseline
 
-The [Workshop knowledgebase](knowledgebase/01%20Projects/01%20Workshop/Workshop.md) is the source of truth. This document reflects the requirements clarified with the user on 2026-10-04.
+This document is the source of truth for Workshop product requirements, clarified with the user on 2026-10-04. The [Workshop knowledgebase](knowledgebase/01%20Projects/01%20Workshop/Workshop.md) captures the broader design history and reasoning.
 
 - Support Windows development with Codex + Herdr.
 - Assume Codex and Herdr are already installed.
@@ -17,7 +17,7 @@ The [Workshop knowledgebase](knowledgebase/01%20Projects/01%20Workshop/Workshop.
 - Use TypeSafe AI's JEV for bounded agent, skill, model, and reasoning selection.
 - Keep project repositories independent of Workshop.
 
-The knowledgebase is local and excluded from Git. These tracked documents make the agreed requirements available in a Workshop clone.
+The knowledgebase is local and excluded from Git. This tracked PRD makes the product requirements available in a Workshop clone.
 
 ## Goals
 

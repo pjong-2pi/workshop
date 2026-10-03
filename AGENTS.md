@@ -2,7 +2,7 @@
 
 ## Read the Requirements
 
-- The Workshop knowledgebase is the source of truth. [PRD.md](PRD.md) captures the agreed requirements; [ROADMAP.md](ROADMAP.md) defines capability milestones.
+- [PRD.md](PRD.md) is the source of truth for product requirements. The Workshop knowledgebase captures the broader design history and reasoning; [ROADMAP.md](ROADMAP.md) defines capability milestones.
 - Resolve genuine requirements ambiguity with the user; do not invent requirements.
 
 ## Foreman Only Orchestrates

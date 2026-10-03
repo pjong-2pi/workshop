@@ -1,8 +1,9 @@
 # Workshop Roadmap
 
 Build the smallest workflow that can add to and modify Workshop itself, then
-use it to develop Workshop further. This roadmap follows [PRD.md](PRD.md)
-and the Workshop knowledgebase.
+use it to develop Workshop further. This roadmap follows [PRD.md](PRD.md),
+the source of truth for product requirements. The Workshop knowledgebase
+captures the broader design history and reasoning.
 
 Milestones describe capabilities and evidence of completion, not dates or a
 prescribed implementation topology. The initial environment is Windows with
