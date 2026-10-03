@@ -58,7 +58,14 @@ Without advice, choose the lowest-resource reliable option from available invent
 and profile defaults.
 
 Require its reported visible-worker confirmation before treating a worker as
-started. A failed dispatch stops and reports; never use a hidden/internal fallback.
+started. Role workspaces must be distinct worktree-backed siblings under the
+canonical repository. Before review or Fitter handoff, require the implementation
+to have stopped with its scoped commit, verification evidence, and exact HEAD.
+Supply each role a distinct path and branch from that HEAD: reviewers remain
+read-only; Fitter receives the final publishing branch and approved scope so its
+current-branch PR mechanics remain valid. Do not move, check out, delete, or
+overwrite the implementation checkout. A failed dispatch stops and reports; never
+use a hidden/internal fallback.
 Monitor the delegated outcome, read its compact handoff, and retain only opaque
 identity values another authorized capability needs. Workers preserve unrelated
 changes and report changed files, behavior, checks actually run, findings, and
@@ -90,4 +97,7 @@ authorization. It uses `github-create-pr`,
 returns PR URL and head SHA, and stops; it does not review or engineer. Report
 observed results and concrete blockers. Coordinate `github-merge-pr` only after
 authorization, and `workshop-clear-bench` after integration; cleanup failure does
-not invalidate completed work and is reported for later/manual cleanup.
+not invalidate completed work and is reported for later/manual cleanup. Role
+workspaces are separate checkouts, never cross-checkout cleanup auxiliaries: clean
+each only with its own matching merged evidence or explicit discard, and report an
+old review-head limit without expanding cleanup behavior.

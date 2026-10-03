@@ -165,8 +165,8 @@
         ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Uses delegated dispatch and prompts only after the expected Codex worker has matching pane/workspace identity, readiness, and session evidence.",
-      "trace": "worker name, kind, pane, workspace, readiness, session, and prompt"
+      "pass_condition": "Uses delegated dispatch and prompts only after the expected Codex worker has matching pane/workspace identity, readiness, session evidence, and worktree metadata for the canonical repository and selected checkout. Each role uses a distinct grouped checkout; reviewer and Fitter checkouts start from the implementation's committed verified HEAD, with Fitter on its supplied publishing branch. Cleanup treats each checkout independently and never passes a role workspace as another checkout's auxiliary.",
+      "trace": "worker name, kind, pane, workspace, readiness, session, repo key/root, checkout path, role branch/base, and independent cleanup boundary"
     },
     {
       "id": "failed-visible-worker-dispatch",
