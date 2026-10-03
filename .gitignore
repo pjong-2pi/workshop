@@ -1,0 +1,18 @@
+# Managed repositories and temporary worktrees are independent Git repositories.
+/projects/
+/.worktrees/
+/knowledgebase/
+
+# Machine-local configuration, credentials, and runtime state.
+/.local/
+/.env
+/.env.*
+!/.env.example
+/tmp/
+*.log
+
+# Raw eval runs are local; eval definitions and curated baselines stay tracked.
+/evals/runs/
+
+# Durable output from the future workshop-index-project skill is intentionally
+# not ignored.
