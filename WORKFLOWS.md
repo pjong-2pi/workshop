@@ -1,22 +1,21 @@
 # Workflow observations
 
-Track recurring work that may benefit from a skill. Git history and session traces
-remain the detailed record; this file captures only reusable patterns.
+Record reusable outcomes and recurring friction, not command transcripts.
+Use an existing skill before adding one. Promote a diagnostic hiccup into durable
+infrastructure only when repeated real usage shows a material reliability benefit.
 
-| Workflow | Observed | Friction or invariant | Skill decision |
+| Workflow | Observed | Evidence or boundary | Decision |
 |---|---:|---|---|
-| Orchestrate isolated project work | 2 | Change authorization carries through scoped commit, branch push, and PR creation after verification/review, while merge and branch deletion stay separate. | Extend `workshop-foreman`; preserve target autonomy and safe cleanup. |
-| Create a GitHub PR | 1 | Verify scope, checks, branch, commit, and explicit base/head. | `github-create-pr` created. |
-| Check a GitHub PR | 1 | Bind findings and checks to the exact PR and head SHA. | `github-check-pr` created. |
-| Merge a GitHub PR | 1 | Require explicit approval and fresh checks; never bypass protections. | `github-merge-pr` created. |
-| Bootstrap Workshop | 3 | First-time setup needs safe local structure, prerequisite checks, explicit user-config boundaries, and durable local initialization state. | `workshop-setup` owns idempotent bootstrap; routine checks stay in `check-environment.ps1`. |
-| Run a Herdr worker lifecycle | 2 | Worktree, pane, agent readiness, prompt/wait, and safe cleanup use stable CLI mechanics; installed Herdr rejected both `--workspace` and `--cwd` on creation. | Keep explicit in `workshop-foreman`; create from `--cwd`, capture returned owner IDs, then use `--workspace` for follow-up. |
-| Fit a reviewed change to PR | 1 | An idle writer's owning worktree can be reused by one auxiliary Fitter only after checks and independent review; bind the open PR to URL and head SHA without merge or cleanup. | Extend `workshop-foreman` with the `fitter` profile; reuse `github-check-pr` and `github-create-pr`, not a new skill. |
-| Clear a completed Herdr bench | 7 | A host-qualified gh command locator is not canonical `OWNER/REPO`; derive `nameWithOwner` from structured `gh repo view`, then bind it to the owning worktree before exact PR/base/head verification and rediscover CWD-sharing auxiliaries immediately before direct owner removal. | Keep verification and auxiliary disposal in `workshop-clear-bench`; inconsistent state stops for manual investigation. |
-| Run Workshop evaluations | 2 | Setup behavior needs disposable fixtures; skill behavior needs harness traces and grading distinct from static checks. | Keep `tests/run.ps1` and versioned definitions; defer a runner skill and full Foreman execution until a real isolated harness exists. |
-| Advise Foreman routing with JEV | 5 | Advisory routing only needs sanitized task text, confidence-gated current choices, and one safe fallback. | Use skill, delegation, role, model in order; stop when work is resolved or a choice falls back. |
-| Inventory local Codex models | 2 | Model availability is account-specific and routing needs only observed description and default reasoning. | `workshop-stocktake` owns an on-demand compact catalog refresh; defer scheduling and selection policy. |
+| Coordinate project work | 3 | Small tasks consumed disproportionate model usage while defensive state management still produced coordination failures. | Foreman delegates every implementation, using a cheap worker and proportional checks for small work, then a mechanics-only Fitter. |
+| Create a GitHub PR | 2 | Scope, dedicated branch, base/head and observed PR result matter; independent engineering review is a readiness choice. | Reuse `github-create-pr` through `fitter`; no lifecycle gatekeeper or claims. |
+| Check a GitHub PR | 1 | Findings and checks refer to the intended PR and head SHA. | Reuse `github-check-pr`; keep inspection read-only. |
+| Merge a GitHub PR | 2 | A sandbox approval gate rejected LGTM after a PR-only preparation stop, although the exact PR had been handed off for a decision. | Reuse `github-merge-pr`; that stop ends at handoff, then clear approval authorizes the one exact current PR and safe verified postmerge cleanup. Continuing no-merge constraints remain until revoked; branch deletion stays separate. |
+| Bootstrap Workshop | 3 | Initial setup needs prerequisite checks and local initialization state. | `workshop-setup` owns bootstrap; do not run it routinely. |
+| Dispatch Herdr work | 3 | Installed CLI rejects both workspace and CWD selectors on creation. An internal sub-agent did implementation after workspace creation, leaving no visible Codex worker in its pane. | `workshop-delegate` starts and verifies the named visible Codex worker before prompting; workspace creation alone is not dispatch. |
+| Clear completed work | 8 | Repeated validation and auxiliary disposal still encountered Windows directory locks. | Validate the intended clean linked worktree and completion/discard, close only Foreman-known associated auxiliaries, then one normal Herdr removal; report failures for later without recovery machinery. |
+| Evaluate Workshop | 3 | Exact prose/CLI tests froze incidental implementation instead of proving outcomes. | Keep metadata/syntax/authority invariants and representative outcome definitions; no universal maximal checks or repeated release passes. |
+| Advise routing with JEV | 5 | Sanitized state, caller-supplied choices, confidence checks and ordinary fallback suffice. | Keep generic one-choice advice and independent chooser skills; no fixed pipeline, telemetry, or orchestration infrastructure. |
+| Inventory Codex models | 2 | Available models are account-specific. | Keep on-demand `workshop-stocktake` inventory; defer scheduling and ranking. |
 
-Add or increment an entry when a workflow repeats or exposes new friction. Prefer
-extending an existing skill when the trigger and authorization boundary are the
-same.
+A single hiccup is evidence, not a mandate for a validator, state machine, skill,
+or recovery mechanism. Fix simple bugs directly.

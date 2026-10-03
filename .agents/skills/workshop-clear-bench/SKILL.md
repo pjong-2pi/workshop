@@ -1,50 +1,34 @@
 ---
 name: workshop-clear-bench
-description: Safely remove a completed Workshop Herdr workspace after integration or explicit discard authorization. Use only as `/workshop-clear-bench <workspace-id>`, not for inconsistent-state recovery.
+description: Remove an intended Workshop-owned Herdr worktree after integration or explicit discard authorization; report normal cleanup failures without forced recovery.
 ---
 
 # Clear a Completed Workshop Bench
 
-Use `/workshop-clear-bench <workspace-id>`. The workspace ID is the only
-user-supplied locator. Do not use this to recover a worktree changed outside
-Herdr.
-
-Resolve the repository from `herdr workspace get "$WORKSPACE"` metadata. Require
-the exact `result.workspace.workspace_id` and nonempty
-`result.workspace.worktree.repo_root`; stop on malformed or mismatched state.
-Before removal, require a clean resolved worktree and exactly one of:
-
-- exact GitHub repository, PR, and base values that prove the PR is merged and
-  its head equals the owning worktree's current `HEAD`, or
-- explicit authorization to discard it.
-
-Verified merge evidence authorizes automatic cleanup; do not request a second
-immediate authorization. Discard authorization must be explicit. Then run the
-gate from the Workshop root:
+Use `/workshop-clear-bench <workspace-id>`, or after a verified authorized merge.
+Identify the owning workspace and repository from Herdr metadata. Require a clean
+linked worktree and either exact merged PR/base/head evidence or explicit discard
+authorization. Do not destroy uncommitted or unrelated user work.
 
 ```powershell
-$workspaceRecord = herdr workspace get "$WORKSPACE" | ConvertFrom-Json
-$repository = $workspaceRecord.result.workspace.worktree.repo_root
-pwsh -NoProfile -File .agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1 -Workspace "$WORKSPACE" -Repository "$REPOSITORY" -GitHubRepository "$GITHUB_REPOSITORY" -PullRequest "$PR" -Base "$BASE" -Confirm:$false
+$record = herdr workspace get $Workspace | ConvertFrom-Json -ErrorAction Stop
+$Repository = $record.result.workspace.worktree.repo_root
+$cleanup = @{ Workspace = $Workspace; Repository = $Repository; GitHubRepository = $GitHubRepository; PullRequest = $PullRequest; Base = $Base; AuxiliaryWorkspace = @($KnownAuxiliaryWorkspaces); Confirm = $false }
+& .agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1 @cleanup
 ```
 
-For an authorized discard, replace the GitHub merge parameters with
-`-DiscardAuthorization "$DISCARD_AUTHORIZATION"`. `GITHUB_REPOSITORY` must be the
-canonical `OWNER/REPO` derived by the merge skill, not its earlier gh command
-locator. The gate uses structured `gh repo view` JSON from the worktree to bind
-that canonical repository, then uses
-`gh pr view` JSON to verify the exact merged PR and owning `HEAD`, discovers
-current Herdr workspaces and panes, closes only auxiliary panes sharing the
-worktree CWD, verifies each close, then rechecks the owner and cleanliness before
-removing its worktree directly; it never combines `--workspace` and
-`--cwd`, parses the sole exact JSON workspace record and resolves its path,
-requires `git status --porcelain` to be empty twice, and removes only with:
+For explicit discard, replace the GitHub parameters with
+`-DiscardAuthorization <user authorization>`. Merge cleanup uses canonical
+`OWNER/REPO` from `gh repo view --json nameWithOwner`; verified integration
+requires no second permission prompt. Ensure assigned workers have stopped.
+`KnownAuxiliaryWorkspaces` contains only the task's worker, reviewer, or Fitter
+workspace IDs retained by Foreman. After validating each supplied auxiliary's pane
+metadata and worktree association, cleanup closes only those auxiliaries, keeps the
+owner live, then makes one normal removal attempt.
 
-```powershell
-herdr worktree remove --workspace "$WORKSPACE" --trust-repository
-```
-
-It verifies the workspace is absent afterward. Do not add `--force`, delete a
-branch, substitute Git deletion, or retry with another tool. If Herdr says the
-target is not a working tree or its state is inconsistent, stop and report that
-condition.
+The script verifies identity, cleanliness, and disposition, then uses normal
+`herdr worktree remove --workspace <id> --trust-repository`. It does not discover
+or close unrelated workspaces, force-delete, delete branches, or substitute
+filesystem/Git deletion. If auxiliary closure, the OS, or the tool fails, report
+the failure and leave it for later/manual cleanup. This does not invalidate the
+completed implementation or PR.

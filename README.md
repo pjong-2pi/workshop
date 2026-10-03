@@ -1,104 +1,77 @@
 # Workshop
 
-A portable agentic development workspace for coordinating coding agents without
-coupling managed projects to Workshop.
+A portable workspace for coordinating Codex agents inside Herdr. Managed
+repositories own their instructions, dependencies, verification, and Git history.
 
-Workshop currently targets Codex running inside Herdr. Managed repositories keep
-their own instructions, dependencies, checks, and Git history; Workshop's Foreman
-supplies the orchestration workflow and generic worker profiles.
+Use the minimum orchestration, implementation, testing, and review necessary for
+the task. All implementation delegates; substantive delegated work uses isolated
+worktrees; high-risk changes receive independent review. Foreman owns the request
+and readiness decision, while `workshop-delegate` performs visible worker
+dispatch. A cheap Fitter performs authorized GitHub mechanics.
 
-## Requirements
+```text
+User -> Foreman (optional JEV chooser advice)
+          -> workshop-delegate -> implementation worker
+          -> proportional verification
+          -> independent reviewer when warranted
+          -> Fitter -> github-create-pr
+```
 
-- Git
-- GitHub CLI (`gh`)
-- Codex CLI
-- Herdr
-- PowerShell 7 for the current bootstrap and validation scripts
+Merge uses `github-merge-pr`; after one unambiguous current PR awaits a decision,
+clear contextual approval may authorize that PR unless a no-merge constraint
+remains. Cleanup closes only Foreman-known task auxiliaries, then is safe and
+best-effort; a directory held by Windows can be left for later.
 
-Bootstrap a new Workshop checkout:
+## Getting started
+
+Requires Git, GitHub CLI, Codex CLI, Herdr, and PowerShell 7.
 
 ```powershell
 pwsh -NoProfile -File scripts/setup.ps1
 ```
 
-Setup creates the ignored `projects/` and `.local/` directories, validates the
-toolchain and authentication, checks Herdr configuration, reports Codex integration
-status, and records successful initialization in `.local/setup-complete`. It is
-safe to rerun intentionally, but is not part of routine Foreman operation.
+Setup creates ignored `projects/` and `.local/`, checks the toolchain and
+authentication, and records initialization. Run it for initial setup, not routine
+development. Use `scripts/check-environment.ps1` for environment diagnostics.
 
-Run the lower-level environment diagnostic directly when needed:
+After changing Workshop skills, profiles, eval definitions, or structure, run:
 
 ```powershell
-pwsh -NoProfile -File scripts/check-environment.ps1
+pwsh -NoProfile -File tests/validate.ps1
 ```
 
-Run the deterministic test suite:
+Run relevant behavioral script checks when their behavior changes; the existing
+disposable-fixture suite is available for broader changes:
 
 ```powershell
 pwsh -NoProfile -File tests/run.ps1
 ```
 
-`tests/validate.ps1` remains the fast static check used by the suite and when
-editing repository structure or eval definitions.
+## Routing and diagnostics
 
-Foreman consults JEV as a confidence-gated, on-demand advisory classifier: first
-for a specialized skill (never Foreman itself), then delegation only if work
-remains, then role and independently least-capable/cheapest appropriate available
-model only after delegation is accepted. It sends a deliberately sanitized,
-non-empty, single-line task description of up to 160 characters. Authorization is not
-sent to JEV and remains solely with Foreman. It sends only
-`selected_skill=none` for delegation or the selected role for model; it
-never sends the raw prompt or Foreman risk/effort classifications. It uses the fixed
-TypeSafe endpoint only when `TYPESAFE_API_KEY` is present, and falls back to Foreman
-judgment on any unavailable, malformed, low-confidence, or disallowed result.
-Production uses one normal API call and never retries. Ignored
-`.local/jev-routing.jsonl` records attempted decisions only: task ID, stage,
-accepted value when any, accepted/fallback, supplied confidence/tokens, and latency;
-it never records task text or completion/baseline data.
+JEV chooser skills are optional independent advice, not a fixed pipeline. Their
+generic helper accepts only caller-supplied sanitized state, choices, instructions,
+and criteria, then either returns one allowed confident choice or no result.
+Callers retain ordinary judgment and safe profile defaults. Model choices are
+caller-supplied observed `model@reasoning` pairs from Stocktake; Fitter remains at
+the PR gate outside general advice. No JEV telemetry is retained.
 
-At the user-facing gate, Foreman records observed orchestration hiccups (CLI/tool
-drift, avoidable retries, coordination failures, or permission/instruction
-ambiguity) as sanitized rows in ignored `.local/orchestration-hiccups.jsonl` and
-mentions them in its handoff. Product defects and normal review findings are excluded.
+Tracked `.codex/config.toml` enables network in trusted workspace-write sessions;
+managed policy may override it.
 
-Tracked `.codex/config.toml` enables network access for new trusted Workshop
-sessions; managed policy may override it.
+## Layout and evaluation
 
-## Evaluation model
+- `.agents/skills/`: Foreman policy, delegate mechanics, optional JEV choosers,
+  bootstrap, cleanup, inventory, and GitHub mechanics.
+- `.codex/agents/`: implementation, optional reviewers, and cheap Fitter.
+- `scripts/`: bootstrap, environment checks, and generic advisory JEV choice.
+- `catalog/models.md`: observed model inventory.
+- `tests/`: structural invariants and existing disposable behavior checks.
+- `evals/`: representative outcome-level behavioral definitions.
+- `WORKFLOWS.md`: observed recurring workflows.
 
-Workshop uses three layers: deterministic disposable-fixture tests; behavioral
-skill definitions that a harness later executes, traces, and grades; and full
-workflow evaluations once disposable Herdr orchestration is available. The
-versioned definitions in `evals/skill-evals.json` are inputs to a harness, not
-claims that Codex has been run.
-
-```text
-Deterministic tests -> every change and pull request
-Behavioral skill evals -> harness execution -> trace -> grading
-Full workflow evals -> later
-```
-
-## Layout
-
-- `.agents/skills/workshop-foreman/` — primary Herdr orchestration skill
-- `.agents/skills/workshop-setup/` — explicit first-time local bootstrap
-- `.agents/skills/workshop-clear-bench/` — guarded cleanup of completed Herdr workspaces
-- `.agents/skills/workshop-stocktake/` — on-demand local Codex model inventory
-- `.agents/skills/github-*/` — create, check, and merge pull requests with `gh`
-- `.codex/agents/` — generic worker, reviewer, and Fitter profiles
-- `evals/` — versioned behavioral evaluation definitions and model
-- `scripts/` — bootstrap and environment checks
-- `catalog/models.md` — versioned observed model inventory for future routing input
-- `tests/` — deterministic repository checks
-- `WORKFLOWS.md` — observed workflows and skill candidates
-
-Target repositories normally live under the ignored `projects/` directory. An
-explicit external repository can also be targeted without adding Workshop files
-to it. Durable output from the future `workshop-index-project` skill will remain
-tracked rather than being treated as runtime state.
-
-## Current milestone
-
-Establish deterministic setup coverage, behavioral skill-eval definitions, and a
-minimal Fitter PR gate; full disposable Foreman runs remain a later evaluation
-layer.
+Managed repositories normally live in ignored `projects/`; explicit external
+repositories are also supported without installing Workshop files there.
+Behavioral eval definitions are not claims of executed agent runs. A future
+isolated harness supplies traces and grading; no universal release-pass ceremony
+is required by the MVP.

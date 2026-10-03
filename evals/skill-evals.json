@@ -1,204 +1,257 @@
 {
   "version": 1,
   "executable": false,
-  "execution": "Definitions only. A harness supplies an isolated checkout, captures the agent trace, and grades the pass condition.",
+  "execution": "Definitions only. An isolated harness captures behavior and grades outcomes; static validation is not execution evidence.",
   "evaluations": [
     {
       "id": "explicit-setup",
       "prompt": "Set up this new Workshop checkout.",
       "fixture": "fresh-workshop",
       "expect": {
-        "skill_invoked": ["workshop-setup"],
+        "skill_invoked": [
+          "workshop-setup"
+        ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Uses the setup workflow and records initialization only after required verification succeeds.",
-      "trace": "commands, exit status, and resulting local state"
+      "pass_condition": "Records initialization only after setup checks succeed.",
+      "trace": "setup result and local state"
     },
     {
-      "id": "uninitialized-clone",
-      "prompt": "This clone has no local setup marker; prepare it for first use.",
-      "fixture": "uninitialized-clone",
-      "expect": {
-        "skill_invoked": ["workshop-setup"],
-        "skill_not_invoked": []
-      },
-      "pass_condition": "Treats the clone as first-time setup rather than routine development.",
-      "trace": "skill selection and local-state changes"
-    },
-    {
-      "id": "foreman-task",
-      "prompt": "Make a substantive, cohesive change in the managed repository.",
+      "id": "small-task",
+      "prompt": "Correct one obvious typo and create the normal PR.",
       "fixture": "clean-managed-repository",
       "expect": {
-        "skill_invoked": ["workshop-foreman"],
-        "skill_not_invoked": ["workshop-setup"]
+        "skill_invoked": [
+          "workshop-foreman",
+          "github-create-pr"
+        ],
+        "skill_not_invoked": [
+          "workshop-setup"
+        ]
       },
-      "pass_condition": "Uses the Foreman lifecycle with isolated delegated work, then commits, pushes, and creates a PR after required verification and review without merging.",
-      "trace": "dispatch, verification, and authorization decisions"
+      "pass_condition": "Delegates even this small implementation to one cheap worker, uses relevant existing checks with no new tests or mandatory reviewer, and a Fitter returning an open PR without merge.",
+      "trace": "agent invocations/models, changed scope, checks and PR URL/head SHA"
     },
     {
-      "id": "pr-review",
-      "prompt": "Review pull request 42 in the supplied repository.",
-      "fixture": "sha-bound-pull-request",
+      "id": "normal-implementation",
+      "prompt": "Update the specified module behavior and create the normal PR.",
+      "fixture": "clean-managed-repository",
       "expect": {
-        "skill_invoked": ["github-check-pr"],
-        "skill_not_invoked": ["workshop-setup"]
+        "skill_invoked": [
+          "workshop-foreman",
+          "github-create-pr"
+        ],
+        "skill_not_invoked": [
+          "workshop-setup"
+        ]
       },
-      "pass_condition": "Inspects the specified pull request and binds findings to its observed head revision.",
-      "trace": "repository, pull request, head SHA, checks, and findings"
+      "pass_condition": "Delegates cohesive implementation to an isolated worker, runs appropriate existing checks and focused behavior coverage where needed, uses independent review only when it adds value, and reaches an authorized PR.",
+      "trace": "owned scope/worktree, evidence, review decision and PR"
     },
     {
-      "id": "routine-development",
-      "prompt": "Update a normal source file in an already initialized Workshop checkout.",
-      "fixture": "initialized-workshop",
+      "id": "risky-implementation",
+      "prompt": "Fix the specified authorization regression and create a PR.",
+      "fixture": "authorization-regression",
       "expect": {
-        "skill_invoked": [],
-        "skill_not_invoked": ["workshop-setup"]
+        "skill_invoked": [
+          "workshop-foreman",
+          "github-create-pr"
+        ],
+        "skill_not_invoked": [
+          "github-merge-pr"
+        ]
       },
-      "pass_condition": "Does not invoke first-time setup merely because Workshop is in use.",
-      "trace": "skill selection and changed files"
+      "pass_condition": "Uses an isolated implementation worker, focused regression coverage, and Master Inspector; material findings receive fixes, affected checks and focused re-review before PR creation.",
+      "trace": "regression evidence, independent review/fixes and PR URL/head SHA"
     },
     {
-      "id": "initialized-workshop",
-      "prompt": "Inspect the initialized Workshop checkout and make no setup changes.",
-      "fixture": "initialized-workshop-with-content",
-      "expect": {
-        "skill_invoked": [],
-        "skill_not_invoked": ["workshop-setup"]
-      },
-      "pass_condition": "Observes existing initialization and does not invoke setup or change local content.",
-      "trace": "skill selection and before/after local-state comparison"
-    },
-    {
-      "id": "clear-completed-bench",
-      "prompt": "/workshop-clear-bench w12G",
-      "fixture": "completed-herdr-workspace",
-      "expect": {
-        "skill_invoked": ["workshop-clear-bench"],
-        "skill_not_invoked": []
-      },
-      "pass_condition": "Verifies the exact merged GitHub PR/base/head, closes only current CWD-sharing auxiliary workspaces, keeps the owner live for direct clean-worktree removal, and verifies absence; unintegrated work requires explicit discard authorization.",
-      "trace": "workspace ID, completion evidence, authorization, preflight, removal, and post-removal listing"
-    },
-    {
-      "id": "jev-pr-review",
-      "prompt": "Review pull request 42 in the supplied repository.",
-      "fixture": "sha-bound-pull-request",
-      "expect": { "skill_invoked": ["workshop-foreman", "github-check-pr"], "skill_not_invoked": [] },
-      "routing": { "skill": "github-check-pr", "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Consumes only a high-confidence allowlisted specialized-skill JEV recommendation; Foreman retains PR inspection and authorization boundaries and does not request later stages.",
-      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
-    },
-    {
-      "id": "jev-pr-create",
-      "prompt": "Create a pull request for the supplied reviewed change.",
+      "id": "fitter",
+      "prompt": "Create the authorized PR for this completed verified change.",
       "fixture": "ready-pull-request",
-      "expect": { "skill_invoked": ["workshop-foreman", "github-create-pr"], "skill_not_invoked": [] },
-      "routing": { "skill": "github-create-pr", "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Consumes only a high-confidence allowlisted create-PR JEV recommendation from sanitized task semantics; Foreman retains authorization boundaries and does not request later stages.",
-      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
+      "expect": {
+        "skill_invoked": [
+          "github-create-pr"
+        ],
+        "skill_not_invoked": [
+          "github-merge-pr",
+          "workshop-clear-bench"
+        ]
+      },
+      "pass_condition": "Fitter receives worktree, base, branch, approved scope and verification evidence; performs scoped commit/push/PR mechanics, rejects a push remote for the wrong repository or an OPEN PR whose base, head branch, or head SHA differs from the supplied values, and returns URL/head SHA without an engineering pass, extra agents, merge or cleanup.",
+      "trace": "scope, Git operations and verified PR result"
     },
     {
-      "id": "jev-pr-merge",
-      "prompt": "Merge the authorized pull request in the supplied repository.",
+      "id": "read-only",
+      "prompt": "Inspect the supplied repository and explain the problem; make no changes.",
+      "fixture": "managed-repository",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": [
+          "github-create-pr",
+          "github-merge-pr"
+        ]
+      },
+      "pass_condition": "Answers from evidence without changing repository/local state, committing, pushing, or creating a PR.",
+      "trace": "diagnostic evidence and before/after state"
+    },
+    {
+      "id": "merge-authorization",
+      "prompt": "Create a PR for this change; do not merge it.",
+      "fixture": "ready-pull-request",
+      "expect": {
+        "skill_invoked": [
+          "github-create-pr"
+        ],
+        "skill_not_invoked": [
+          "github-merge-pr"
+        ]
+      },
+      "pass_condition": "Creates the authorized PR and stops; repository change or PR authorization never implies merge or branch deletion.",
+      "trace": "authorized gate and observed PR state"
+    },
+    {
+      "id": "authorized-merge",
+      "prompt": "Merge PR 42 in the supplied repository.",
       "fixture": "approved-mergeable-pull-request",
-      "expect": { "skill_invoked": ["workshop-foreman", "github-merge-pr"], "skill_not_invoked": [] },
-      "routing": { "skill": "github-merge-pr", "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Consumes only a high-confidence allowlisted merge-PR JEV recommendation from sanitized task semantics; Foreman retains merge authorization and does not request later stages.",
-      "trace": "attempted JEV stage decision, accepted value/confidence, supplied tokens, latency, and Foreman decision"
+      "expect": {
+        "skill_invoked": [
+          "github-merge-pr",
+          "workshop-clear-bench"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Verifies the intended PR and fresh head/checks/reviews, respects repository protection, confirms merge, and keeps branch deletion separate.",
+      "trace": "authorization, verified SHA, protection and merge result"
     },
     {
-      "id": "jev-substantive-task",
-      "prompt": "Implement the specified validation rule across the cohesive managed-repository module.",
-      "fixture": "clean-managed-repository",
-      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
-      "routing": { "skill": "none", "agent": "master-craftsman", "model": "gpt-5.6-luna", "delegate": true },
-      "pass_condition": "After no specialized skill applies, consumes high-confidence delegation, role, and independent least-capable/cheapest appropriate model recommendations from task semantics without changing the required isolated lifecycle and review.",
-      "trace": "attempted JEV stage decisions, accepted values/confidence, supplied tokens, latency, and Foreman lifecycle"
+      "id": "contextual-merge-approval",
+      "prompt": "LGTM!",
+      "fixture": "one-current-verified-pull-request-awaiting-decision",
+      "expect": {
+        "skill_invoked": [
+          "github-merge-pr",
+          "workshop-clear-bench"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "After the exact PR was prepared and handed off with 'do not merge', treats a new clear contextual approval as authorization for that one current PR and normal safe verified postmerge cleanup without another prompt; honors a continuing no-merge constraint unless explicitly revoked, and verifies fresh exact head, checks, and repository protection before merging.",
+      "trace": "current PR identity, approval context, verification, merge result, and cleanup"
     },
     {
-      "id": "jev-trivial-task",
-      "prompt": "Correct one obvious typo in the supplied local file.",
-      "fixture": "initialized-workshop",
-      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": ["workshop-setup"] },
-      "routing": { "skill": "none", "agent": null, "model": null, "delegate": false },
-      "pass_condition": "After no specialized skill applies, consumes a high-confidence non-delegation recommendation while Foreman performs the trivial direct edit without requesting role or model.",
-      "trace": "attempted JEV stage decisions, accepted values/confidence, supplied tokens, latency, and Foreman decision"
+      "id": "ambiguous-merge-approval",
+      "prompt": "looks good",
+      "fixture": "ambiguous-pull-request-context",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": [
+          "github-merge-pr"
+        ]
+      },
+      "pass_condition": "Requests clarification rather than inferring which PR may merge.",
+      "trace": "ambiguous PR context and no merge action"
+    },
+    {
+      "id": "visible-worker-dispatch",
+      "prompt": "Implement the specified change.",
+      "fixture": "ready-visible-codex-worker",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman",
+          "workshop-delegate"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Uses delegated dispatch and prompts only after the expected Codex worker has matching pane/workspace identity, readiness, and session evidence.",
+      "trace": "worker name, kind, pane, workspace, readiness, session, and prompt"
+    },
+    {
+      "id": "failed-visible-worker-dispatch",
+      "prompt": "Implement the specified change.",
+      "fixture": "missing-visible-codex-worker",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman",
+          "workshop-delegate"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Delegated dispatch stops and reports the failed visible-session invariant without prompting or substituting an internal agent.",
+      "trace": "start/get evidence and stopped dispatch"
+    },
+    {
+      "id": "unrelated-user-work",
+      "prompt": "Implement the requested change while unrelated user edits exist in the checkout.",
+      "fixture": "dirty-managed-repository",
+      "expect": {
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "Preserves unrelated user edits, delegates scoped work in isolation from a safe base, and excludes unrelated files and commits from the PR. Stops if no safe base/scope can be resolved.",
+      "trace": "before/after unrelated content, isolated diff and scoped staging"
     },
     {
       "id": "jev-fallback",
-      "prompt": "Make a task routing decision while JEV is unavailable or returns malformed, low-confidence, or disallowed choices.",
+      "prompt": "Route a small task when JEV is unavailable or returns disallowed advice.",
       "fixture": "offline-workshop",
-      "expect": { "skill_invoked": ["workshop-foreman"], "skill_not_invoked": [] },
-      "routing": { "skill": null, "agent": null, "model": null, "delegate": null },
-      "pass_condition": "Uses existing Foreman judgment for any rejected stage and performs no network-dependent test action.",
-      "trace": "attempted fallback stage, task ID, latency, and Foreman decision"
-    },
-    {
-      "id": "fitter-pr",
-      "prompt": "Advance the supplied reviewed, verified change to its authorized pull-request gate.",
-      "fixture": "reviewed-owning-worktree",
       "expect": {
-        "skill_invoked": ["workshop-foreman", "github-check-pr", "github-create-pr"],
-        "skill_not_invoked": ["github-merge-pr", "workshop-clear-bench"]
-      },
-      "pass_condition": "After the writer is idle, one Fitter reuses the owning worktree through an auxiliary CWD-sharing workspace, verifies the reviewed change, and creates an open PR with the exact PR URL and head SHA; no merge or cleanup occurs.",
-      "trace": "Fitter profile, owning worktree and auxiliary workspace IDs, writer-idle state, approved paths, checks, review evidence, PR URL, head SHA, and no merge/cleanup actions"
-    },
-    {
-      "id": "active-fitter",
-      "prompt": "Advance a reviewed change, but a non-done fitter-run agent and a done fitter-agent-reviewer share the supplied owning worktree.",
-      "fixture": "active-fitter-owning-worktree",
-      "expect": {
-        "skill_invoked": ["workshop-foreman"],
-        "skill_not_invoked": ["github-create-pr"]
-      },
-      "pass_condition": "Discovers the non-done fitter-run agent sharing the owning worktree, ignores the done fitter-agent-reviewer, stops before dispatch, and creates no auxiliary workspace or PR.",
-      "trace": "owning worktree, agent name/CWD/workspace ID/status, stop decision, and absence of auxiliary workspace or PR actions"
-    },
-    {
-      "id": "concurrent-fitter",
-      "prompt": "Dispatch two Fitters for the same owning worktree concurrently.",
-      "fixture": "concurrent-fitter-owning-worktree",
-      "expect": {
-        "skill_invoked": ["workshop-foreman"],
-        "skill_not_invoked": ["github-create-pr"]
-      },
-      "pass_condition": "The first dispatch acquires the atomic claim for its owner workspace under Workshop .local; the concurrent dispatch stops on the existing claim, creates no auxiliary workspace, opens no PR, and makes no target path/change.",
-      "trace": "owner workspace, Workshop-local claim path, exclusive create result, concurrent stop decision, and absence of a second auxiliary workspace, PR, or target change"
-    },
-    {
-      "id": "traversal-fitter-claim",
-      "prompt": "Dispatch Fitter with a traversal-like owning workspace ID.",
-      "fixture": "traversal-workspace-id",
-      "expect": {
-        "skill_invoked": ["workshop-foreman"],
-        "skill_not_invoked": ["github-create-pr"]
-      },
-      "pass_condition": "Rejects the traversal workspace ID before claim creation because it is not a safe leaf, stops, creates no claim, and makes no target path/change.",
-      "trace": "workspace ID validation, resolved claim parent/path checks, stop decision, and absence of claim or target changes"
-    },
-    {
-      "id": "foreman-hiccup",
-      "prompt": "A supplied Herdr command has CLI drift; continue the authorized workflow and report the orchestration hiccup.",
-      "fixture": "cli-drift-managed-repository",
-      "expect": {
-        "skill_invoked": ["workshop-foreman"],
+        "skill_invoked": [
+          "workshop-foreman"
+        ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Records the tool/CLI drift as one sanitized JSONL hiccup row, correlates its routing ID when available, mentions it in the handoff, excludes product defects and normal review findings, and promotes a repeated actionable pattern to WORKFLOWS.md only when Workshop edits are authorized.",
-      "trace": "timestamp_utc, stage, category, sanitized symptom, resolution/status, routing ID when available, handoff, and any authorized workflow promotion"
+      "pass_condition": "Falls back to proportionate Foreman judgment without retries, unsafe role selection, new orchestration infrastructure or expanded authority; JEV advice never permits direct Foreman implementation.",
+      "trace": "advisory failure, fallback and resulting workflow"
+    },
+    {
+      "id": "pr-review",
+      "prompt": "Review PR 42 in the supplied repository.",
+      "fixture": "sha-bound-pull-request",
+      "expect": {
+        "skill_invoked": [
+          "github-check-pr"
+        ],
+        "skill_not_invoked": [
+          "github-create-pr",
+          "github-merge-pr",
+          "workshop-clear-bench"
+        ]
+      },
+      "pass_condition": "Inspects the exact PR and binds findings to the observed head without mutation.",
+      "trace": "repository, PR, head SHA and findings"
+    },
+    {
+      "id": "clear-completed-bench",
+      "prompt": "/workshop-clear-bench bench-12",
+      "fixture": "completed-herdr-workspace",
+      "expect": {
+        "skill_invoked": [
+          "workshop-clear-bench"
+        ],
+        "skill_not_invoked": []
+      },
+      "pass_condition": "After exact merged PR/base/head evidence or explicit discard, closes only supplied associated task auxiliaries and removes the intended clean linked worktree; tool/OS failure is reported and left for later without forced recovery or invalidating the completed PR.",
+      "trace": "identity, status, disposition, supplied auxiliaries, and normal removal result"
     },
     {
       "id": "stocktake-models",
-      "prompt": "Run /workshop-stocktake to refresh the local Codex model inventory.",
+      "prompt": "Run /workshop-stocktake to refresh the local model inventory.",
       "fixture": "authenticated-codex-model-catalog",
       "expect": {
-        "skill_invoked": ["workshop-stocktake"],
-        "skill_not_invoked": ["workshop-setup"]
+        "skill_invoked": [
+          "workshop-stocktake"
+        ],
+        "skill_not_invoked": [
+          "workshop-setup"
+        ]
       },
-      "pass_condition": "Uses the local Codex model catalog, records only observed fields with explicit unknowns, and does not select or rank models.",
-      "trace": "Codex discovery source, observed model fields, changed catalog state, and unknown metadata"
+      "pass_condition": "Records observed models without selecting or ranking them.",
+      "trace": "discovery source and changed catalog"
     }
   ]
 }

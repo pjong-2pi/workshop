@@ -1,68 +1,41 @@
 ---
 name: github-merge-pr
-description: Merge an exact GitHub pull request with gh CLI only after explicit authorization and fresh SHA-bound verification of reviews, checks, policy, and mergeability. Use only when the user asks to merge; never infer approval.
+description: Merge an exact explicitly authorized GitHub pull request after fresh head, checks, reviews, and mergeability verification; respect repository protection and confirm success.
 ---
 
 # GitHub Merge PR
 
-Require explicit authorization for `REPO` (a gh command locator, such as
-`HOST/OWNER/REPO`) and `PR` (number or URL). Resolve `REPO` once through structured
-repository output and retain `GITHUB_REPOSITORY` as its canonical `OWNER/REPO`:
+Require explicit user authorization for the intended repository and exact PR.
+PR creation, code approval, or JEV advice alone does not imply merge authorization.
+A preparation instruction to create/update a PR and not merge stops at that PR
+handoff; it is not a permanent veto. Once one exact, unambiguous current PR has
+been handed off for a decision, clear contextual approval may authorize its merge
+and safe verified postmerge cleanup without another prompt. Honor a continuing
+no-merge constraint unless explicitly revoked; clarify ambiguous PRs or approval.
+Confirm identity and inspect current state immediately before merging:
 
 ```sh
-GITHUB_REPOSITORY="$(gh repo view "$REPO" --json nameWithOwner --jq .nameWithOwner)" || exit 1
-test -n "$GITHUB_REPOSITORY" || exit 1
+gh repo view "$REPO" --json nameWithOwner,mergeCommitAllowed,rebaseMergeAllowed,squashMergeAllowed
+gh pr view "$PR" --repo "$REPO" --json number,url,state,isDraft,baseRefName,headRefOid,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
+gh pr checks "$PR" --repo "$REPO" --required
 ```
 
-Use `GITHUB_REPOSITORY` for every subsequent PR command and for cleanup; retain
-`REPO` only as the command locator. Freeze the freshly verified `headRefOid` as
-`SHA`. If the head changes, stop and repeat verification; never reuse evidence
-from the earlier head.
+Require an open, non-draft, mergeable PR with no blocking reviews or failed/pending
+required checks. Empty checks mean none configured. Bind verification to current
+`headRefOid` as `SHA`; if it changes, repeat verification.
+Use the target-required merge method, otherwise the user's chosen method,
+otherwise squash if enabled. Stop if the method is unavailable.
 
-## Re-verify immediately before merge
+Run one merge command with that method (`--merge`, `--rebase`, or `--squash`):
 
 ```sh
-gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json number,url,state,isDraft,baseRefName,headRefName,headRefOid,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup
-gh pr checks "$PR" --repo "$GITHUB_REPOSITORY" --required --json name,state,bucket,workflow,link
-gh repo view "$REPO" --json nameWithOwner,mergeCommitAllowed,rebaseMergeAllowed,squashMergeAllowed,viewerPermission
+gh pr merge "$PR" --repo "$REPO" --match-head-commit "$SHA" --squash
+gh pr view "$PR" --repo "$REPO" --json url,state,headRefOid,mergedAt,mergeCommit
 ```
 
-Stop if the current `headRefOid` differs from `SHA`; the PR is not open and
-mergeable; it is a draft; a required check is pending or failed; review blocks the
-merge; repository policy is unclear; or permission is insufficient. Empty checks
-mean no configured checks, not a successful CI run.
-
-## Select the method
-
-Use this precedence:
-
-1. Target repository instructions or policy.
-2. Explicit user instruction.
-3. Squash when neither specifies a method and the repository enables squash.
-
-Stop if the selected method is not enabled or neither of the first two rules
-selects a method and squash is disabled.
-
-Run exactly one command matching that decision:
-
-```sh
-gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --match-head-commit "$SHA" --merge
-gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --match-head-commit "$SHA" --rebase
-gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --match-head-commit "$SHA" --squash
-```
-
-Never add `--admin`, `--auto`, or `--delete-branch`; never bypass protection,
-force-push, or infer authorization. Stop rather than entering a merge queue or
-enabling auto-merge in this MVP.
-
-## Verify the result
-
-```sh
-gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json number,url,state,headRefOid,mergedAt,mergedBy,mergeCommit
-```
-
-Success requires `state: MERGED`, a non-null `mergedAt` and `mergeCommit`, and the
-same `headRefOid` as `SHA`. Report the URL and merge commit; otherwise report the
-observed state without retrying another merge method. After an exact verified merge
-from Foreman, pass `GITHUB_REPOSITORY` to cleanup with the verified PR and base;
-that merge authorization covers cleanup without another prompt.
+Never bypass repository protection or use `--admin`, `--auto`, `--delete-branch`,
+or force-push. Report failure without trying another merge method.
+Confirm MERGED state, merge commit, and the authorized head SHA; return the URL
+and merge commit. Branch deletion needs separate authorization.
+A verified merge permits safe best-effort bench cleanup without another prompt;
+pass the canonical `nameWithOwner`, exact PR, and base to `workshop-clear-bench`.
