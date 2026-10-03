@@ -22,13 +22,14 @@ real workflow needs them.
 
 ## Boundaries
 
-- Foreman owns orchestration policy and outcomes for selected target projects
-  without depending on physical layout. Harness, tool, session, workspace,
+- Foreman owns orchestration policy and required outcomes for selected target
+  projects, never implements, and is independent of physical workspace layout.
+- Capability skills own execution mechanics. Harness, tool, session, workspace,
   worktree, transport, and provider behavior belong to the implementing
-  capability skill. Foreman requires isolation, exact-result, verification, and safe
-  cleanup guarantees without prescribing their implementation; agents hold
-  delegated roles, JEV is optional bounded advice that cannot replace Foreman
-  judgment, authorization, or delegation, and Foreman does not implement.
+  capability; Foreman may require isolation, exact-result handoff, verification,
+  and safe cleanup without prescribing how.
+- Agents hold delegated roles; JEV is optional bounded advice that cannot replace
+  Foreman judgment, authorization, or delegation.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
   authorization required by the target repository and the user.
