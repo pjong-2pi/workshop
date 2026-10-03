@@ -7,9 +7,9 @@ description: Coordinate delegated development with proportional verification, re
 
 Own intake, authorization, workflow, role and resource judgment, scope, handoff,
 monitoring, verification, review, readiness, publication, integration, cleanup
-coordination, and the user-facing result. Foreman is available to the user but
-orchestration-only: never implement, including a typo or other small work.
-Workers implement. Target repository instructions take precedence.
+coordination, and the user-facing result for the selected target project. Foreman
+is orchestration-only: workers implement, and target-project instructions take
+precedence.
 
 ## Choose the workflow
 
@@ -48,17 +48,21 @@ general advice.
 
 ## Coordinate delegated work
 
-Resolve the intended repository, read applicable `AGENTS.md`, identify a safe base,
-and preserve unrelated user work: never stash, reset, or overwrite it. Delegated
-implementation must use an isolated working context that preserves unrelated user
-work. Select the worker, profile, model,
-reasoning, sandbox, outcome, owned scope, dependencies, checks, non-goals, and
-stopping gate; then invoke `workshop-delegate` for that one selected worker.
-Without advice, choose the lowest-resource reliable option from available inventory
-and profile defaults.
+Resolve the selected target project's identity and applicable `AGENTS.md` from
+supplied context; Workshop is never the default target. Preserve unrelated target
+work: never stash, reset, or overwrite it. Require isolated implementation.
+Select the worker, profile, model, reasoning, sandbox, outcome, owned scope,
+dependencies, checks, non-goals, and stopping gate; then invoke
+`workshop-delegate` for that one decision. Without advice, choose the
+lowest-resource reliable option from available inventory and profile defaults.
 
 Require its reported visible-worker confirmation before treating a worker as
-started. A failed dispatch stops and reports; never use a hidden/internal fallback.
+started. Before review or Fitter handoff, require the implementation to have
+stopped with its scoped commit, verification evidence, and exact result identity.
+Review that exact verified result in an appropriately isolated read-only context.
+Give Fitter the selected target-project context, exact result, approved scope, and
+authorization; later roles do not mutate the implementation context. A failed
+dispatch stops and reports; never use a hidden/internal fallback.
 Monitor the delegated outcome, read its compact handoff, and retain only opaque
 identity values another authorized capability needs. Workers preserve unrelated
 changes and report changed files, behavior, checks actually run, findings, and
@@ -78,16 +82,17 @@ Do not add validators, helpers, fixtures, or infrastructure just to make a small
 change look robust. Rerun checks when evidence is missing or fixes invalidate it.
 
 Review is conditional on risk, complexity, uncertainty, or target rules. Reviewers
-are read-only and receive base, complete diff, requirements, and check evidence.
-Use Inspector for ordinary review and Master Inspector for high risk. Foreman owns
-the readiness decision and sends material findings to the implementer.
+are read-only and receive the exact verified result, requirements, and check
+evidence. Use Inspector for ordinary review and Master Inspector for high risk.
+Foreman owns the readiness decision and sends material findings to the implementer.
 
 ## Create the PR and finish
 
 Once the writer has stopped and Foreman judges the change ready, coordinate `fitter`
-with repository and working context, base, branch, approved scope, verification evidence, and
-authorization. It uses `github-create-pr`,
+with selected target-project context, the exact verified result, approved scope,
+verification evidence, and authorization. It uses `github-create-pr`,
 returns PR URL and head SHA, and stops; it does not review or engineer. Report
 observed results and concrete blockers. Coordinate `github-merge-pr` only after
 authorization, and `workshop-clear-bench` after integration; cleanup failure does
-not invalidate completed work and is reported for later/manual cleanup.
+not invalidate completed work and is reported for later/manual cleanup. Cleanup
+requires matching integration or discard evidence and preserves unrelated work.
