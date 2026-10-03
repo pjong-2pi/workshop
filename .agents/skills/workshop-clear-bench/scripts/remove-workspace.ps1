@@ -31,7 +31,7 @@ $matches = @(($listing | Out-String | ConvertFrom-Json).result.worktrees | Where
 if ($matches.Count -eq 0) {
     $stalePath = $owner.worktree.checkout_path
     if ([string]::IsNullOrWhiteSpace($stalePath)) { throw 'Owning worktree is missing or ambiguous.' }
-    throw "Herdr workspace '$Workspace' remains after Git removed its worktree registration; checkout directory '$stalePath' requires manual resolution."
+    throw "Herdr workspace '$Workspace' has no matching worktree association; checkout directory '$stalePath' requires manual resolution."
 }
 if ($matches.Count -ne 1 -or [string]::IsNullOrWhiteSpace($matches[0].path)) { throw 'Owning worktree is missing or ambiguous.' }
 $worktree = (Resolve-Path -LiteralPath $matches[0].path).Path
@@ -98,5 +98,8 @@ if ($PSCmdlet.ShouldProcess($worktree, 'remove completed Herdr worktree')) {
     }
     $workspaceList = & herdr workspace list
     if ($LASTEXITCODE -ne 0) { throw "Cleanup not confirmed for '$Workspace'; could not inspect Herdr workspaces." }
-    if (@(($workspaceList | Out-String | ConvertFrom-Json).result.workspaces | Where-Object { $_.workspace_id -ceq $Workspace }).Count) { throw "Cleanup not confirmed for '$Workspace'; Herdr workspace remains." }
+    $remainingIds = @($Workspace) + @($AuxiliaryWorkspace | Select-Object -Unique)
+    foreach ($id in $remainingIds) {
+        if (@(($workspaceList | Out-String | ConvertFrom-Json).result.workspaces | Where-Object { $_.workspace_id -ceq $id }).Count) { throw "Cleanup not confirmed; Herdr workspace '$id' remains." }
+    }
 }

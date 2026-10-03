@@ -3,7 +3,7 @@ $gate = Join-Path (Split-Path -Parent $PSScriptRoot) '.agents/skills/workshop-cl
 $fixture = Join-Path ([IO.Path]::GetTempPath()) "workshop-clear-bench-test-$([guid]::NewGuid())"
 New-Item -ItemType Directory -Path $fixture, (Join-Path $fixture 'bin'), (Join-Path $fixture 'repository'), (Join-Path $fixture 'worktree') | Out-Null
 $oldPath = $env:PATH
-$environmentNames = @('HERDR_STATE', 'HERDR_METADATA', 'HERDR_LOG', 'HERDR_OWNER_PANES', 'HERDR_PANES1', 'HERDR_PANES2', 'HERDR_REMOVE_FAILURE', 'HERDR_CLOSE_FAILURE', 'HERDR_PANE_CLOSE_FAILURE', 'HERDR_KEEP_DIRECTORY', 'HERDR_KEEP_GIT', 'HERDR_KEEP_WORKSPACE', 'HERDR_WORKTREE', 'HERDR_GIT_WORKTREES', 'HERDR_WORKSPACE_REMOVED', 'GH_STATE', 'GH_REPOSITORY_STATE', 'GIT_COMMON', 'GIT_DIRTY', 'WORKSHOP_CLEANUP_TEST_ARGS', 'WORKSHOP_CLEANUP_TEST_GATE')
+$environmentNames = @('HERDR_STATE', 'HERDR_METADATA', 'HERDR_LOG', 'HERDR_OWNER_PANES', 'HERDR_PANES1', 'HERDR_PANES2', 'HERDR_REMOVE_FAILURE', 'HERDR_CLOSE_FAILURE', 'HERDR_PANE_CLOSE_FAILURE', 'HERDR_KEEP_DIRECTORY', 'HERDR_KEEP_GIT', 'HERDR_KEEP_WORKSPACE', 'HERDR_KEEP_AUXILIARY', 'HERDR_WORKTREE', 'HERDR_GIT_WORKTREES', 'HERDR_WORKSPACE_REMOVED', 'GH_STATE', 'GH_REPOSITORY_STATE', 'GIT_COMMON', 'GIT_DIRTY', 'WORKSHOP_CLEANUP_TEST_ARGS', 'WORKSHOP_CLEANUP_TEST_GATE')
 $previousEnvironment = @{}
 foreach ($name in $environmentNames) { $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 try {
@@ -16,6 +16,8 @@ if "%1"=="pane" goto pane
 if "%1"=="workspace" if "%2"=="get" if exist "%HERDR_WORKSPACE_REMOVED%" exit /b 1
 if "%1"=="workspace" if "%2"=="get" type "%HERDR_METADATA%"
 if "%1"=="workspace" if "%2"=="get" exit /b 0
+if "%1"=="workspace" if "%2"=="list" if "%HERDR_KEEP_AUXILIARY%"=="1" echo {"result":{"workspaces":[{"workspace_id":"aux-1"}]}}
+if "%1"=="workspace" if "%2"=="list" if "%HERDR_KEEP_AUXILIARY%"=="1" exit /b 0
 if "%1"=="workspace" if "%2"=="list" if exist "%HERDR_WORKSPACE_REMOVED%" echo {"result":{"workspaces":[]}}
 if "%1"=="workspace" if "%2"=="list" if exist "%HERDR_WORKSPACE_REMOVED%" exit /b 0
 if "%1"=="workspace" if "%2"=="list" echo {"result":{"workspaces":[{"workspace_id":"bench-12"}]}}
@@ -91,6 +93,7 @@ exit /b 0
         $env:HERDR_KEEP_DIRECTORY = '0'
         $env:HERDR_KEEP_GIT = '0'
         $env:HERDR_KEEP_WORKSPACE = '0'
+        $env:HERDR_KEEP_AUXILIARY = '0'
     }
     function Invoke-Gate {
         param([string[]]$AuxiliaryWorkspace, [switch]$Discard, [switch]$WhatIf)
@@ -163,9 +166,14 @@ exit /b 0
     }
 
     Reset-State
+    $env:HERDR_KEEP_AUXILIARY = '1'
+    $result = Invoke-Gate -AuxiliaryWorkspace aux-1
+    if ($result.Code -eq 0 -or $result.Output -notmatch "workspace 'aux-1' remains") { throw 'A supplied auxiliary remaining in Herdr must prevent cleanup success.' }
+
+    Reset-State
     Set-Content -LiteralPath $state -Value '{"result":{"worktrees":[]}}'
     $result = Invoke-Gate -Discard
-    if ($result.Code -eq 0 -or $result.Output -notmatch 'Git removed its worktree registration' -or $result.Calls -match 'workspace close|worktree remove') { throw 'Partially removed Git worktree must be reported without recovery.' }
+    if ($result.Code -eq 0 -or $result.Output -notmatch 'no matching worktree association' -or $result.Calls -match 'workspace close|worktree remove') { throw 'Inconsistent worktree association must be reported without recovery.' }
 } finally {
     $env:PATH = $oldPath
     foreach ($name in $environmentNames) { [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process') }
