@@ -18,4 +18,7 @@ and supported reasoning efforts, and last checked time. Do not add guesses, scra
 sources, or turn this inventory into model-selection policy.
 
 If discovery fails, leave the existing catalog intact and report the failure.
+When a workspace-write sandbox denies Codex access to its local state, run the
+same command with approved unsandboxed execution; do not substitute a separate
+state directory or fabricate an inventory.
 No periodic refresh is part of this skill.

@@ -11,17 +11,21 @@ try {
     Set-Content -LiteralPath (Join-Path $bin 'codex.ps1') -Value @'
 param()
 if ($args[0] -eq '--version') { 'codex-cli test'; exit 0 }
-$initialize = $input | Select-Object -First 1 | ConvertFrom-Json
+if ($env:STOCKTAKE_TEST_MODE -eq 'startup-failure') {
+    [Console]::Error.WriteLine("Error: Access is denied. at $env:USERPROFILE\\.codex\\tmp")
+    exit 1
+}
+$initialize = [Console]::In.ReadLine() | ConvertFrom-Json
 if ($initialize.method -ne 'initialize') { throw 'initialize required' }
 '{"id":1,"result":{}}'
-$initialized = $input | Select-Object -First 1 | ConvertFrom-Json
+$initialized = [Console]::In.ReadLine() | ConvertFrom-Json
 if ($initialized.method -ne 'initialized') { throw 'initialized notification required' }
-$first = $input | Select-Object -First 1 | ConvertFrom-Json
+$first = [Console]::In.ReadLine() | ConvertFrom-Json
 if ($first.method -ne 'model/list') { throw 'model/list required after initialized' }
 if ($env:STOCKTAKE_TEST_MODE -eq 'malformed') { '{"id":2,"result":{"nextCursor":null}}'; exit 0 }
 if ($env:STOCKTAKE_TEST_MODE -eq 'missing-cursor') { '{"id":2,"result":{"data":[{"id":"model-c"}]}}'; exit 0 }
 '{"id":2,"result":{"data":[{"id":"model-b","inputModalities":["text"],"supportedReasoningEfforts":[{"reasoningEffort":"low"}]},{"id":"model-c"}],"nextCursor":"second"}}'
-$second = $input | Select-Object -First 1 | ConvertFrom-Json
+$second = [Console]::In.ReadLine() | ConvertFrom-Json
 if ($second.params.cursor -ne 'second') { throw 'pagination cursor required' }
 '{"id":2,"result":{"data":[{"id":"model-a","provider":"observed provider","pricing":"observed pricing","contextWindow":"observed context","displayName":"Observed name","description":"Observed description","defaultReasoningEffort":"medium","inputModalities":["text","image"],"supportedReasoningEfforts":[{"reasoningEffort":"medium"}],"multiAgentVersion":"v1","defaultServiceTier":"priority","modelSpecialty":"coding","isDefault":true}],"nextCursor":null}}'
 '@
@@ -37,11 +41,13 @@ if ($second.params.cursor -ne 'second') { throw 'pagination cursor required' }
     if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Unchanged inventory must not rewrite its timestamp.' }
     $oldMode = $env:STOCKTAKE_TEST_MODE
     try {
-        foreach ($mode in @('malformed', 'missing-cursor')) {
+        foreach ($mode in @('malformed', 'missing-cursor', 'startup-failure')) {
             $env:STOCKTAKE_TEST_MODE = $mode
-            & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd') 2>$null
+            $failure = & pwsh -NoProfile -File $script -CatalogPath $catalog -CodexCommand (Join-Path $bin 'codex.cmd') 2>&1
             if ($LASTEXITCODE -eq 0) { throw "$mode model/list data must fail discovery." }
             if ((Get-Content -LiteralPath $catalog -Raw) -ne $first) { throw 'Failed discovery must preserve the prior catalog byte-for-byte.' }
+            if ($mode -eq 'malformed' -and ($failure -join "`n") -notmatch 'invalid data page') { throw 'Protocol failures without stderr must retain their original detail.' }
+            if ($mode -eq 'startup-failure' -and ((($failure -join "`n") -notmatch 'closed before responding to initialize') -or (($failure -join "`n") -notmatch 'approved unsandboxed execution') -or (($failure -join "`n") -match [regex]::Escape($env:USERPROFILE)))) { throw 'Pre-initialize startup failures must preserve the protocol detail, be sanitized, and report the approved unsandboxed execution requirement.' }
         }
     } finally { $env:STOCKTAKE_TEST_MODE = $oldMode }
 } finally { Remove-Item -LiteralPath $fixture -Recurse -Force }

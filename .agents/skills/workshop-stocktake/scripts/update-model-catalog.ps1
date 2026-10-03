@@ -30,6 +30,19 @@ function Send-CodexNotification([System.Diagnostics.Process] $Process, [string] 
     $Process.StandardInput.WriteLine((@{ method = $Method; params = $Params } | ConvertTo-Json -Compress -Depth 8))
 }
 
+function Get-SanitizedCodexError([string] $ErrorText) {
+    $message = ($ErrorText -replace "[\r\n]+", ' ').Trim()
+    if ([string]::IsNullOrWhiteSpace($message)) { return $null }
+    $message = $message -replace '\\\\', '\\'
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $message = $message.Replace($env:USERPROFILE, '<user-profile>')
+        $message = $message.Replace($env:USERPROFILE.Replace('\', '\\'), '<user-profile>')
+    }
+    $message = $message -replace '(?i)(api[_-]?key|access[_-]?token|authorization)\s*[:=]\s*\S+', '$1=<redacted>'
+    if ($message.Length -gt 800) { $message = $message.Substring(0, 800) + '…' }
+    $message
+}
+
 function Get-Property([object] $Object, [string] $Name) {
     $property = $Object.PSObject.Properties[$Name]
     if ($null -eq $property) { return $null }
@@ -65,6 +78,7 @@ function Get-CodexModels([string] $Command) {
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $start
     if (-not $process.Start()) { throw 'Could not start Codex app-server.' }
+    $stderrTask = $process.StandardError.ReadToEndAsync()
     try {
         Invoke-CodexRequest $process 1 'initialize' @{ clientInfo = @{ name = 'workshop-stocktake'; version = '1' } } | Out-Null
         Send-CodexNotification $process 'initialized' @{}
@@ -79,8 +93,19 @@ function Get-CodexModels([string] $Command) {
             if (-not [string]::IsNullOrWhiteSpace($cursor) -and -not $seenCursors.Add($cursor)) { throw 'Codex model/list repeated a pagination cursor.' }
         } while (-not [string]::IsNullOrWhiteSpace($cursor))
         return $models
-    } finally {
+    } catch {
+        $originalMessage = $_.Exception.Message
         if (-not $process.HasExited) { $process.Kill() }
+        $process.WaitForExit()
+        $stderr = Get-SanitizedCodexError $stderrTask.GetAwaiter().GetResult()
+        $message = "Codex app-server failed while discovering models (exit code $($process.ExitCode)): $originalMessage"
+        if ($null -ne $stderr) { $message += " $stderr" }
+        if ($stderr -match '(?i)access is denied|permission denied') {
+            $message += ' Codex could not access required local resources; run this discovery with approved unsandboxed execution.'
+        }
+        throw $message
+    } finally {
+        if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit() }
         $process.Dispose()
     }
 }
