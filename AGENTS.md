@@ -1,0 +1,41 @@
+# Workshop Agent Instructions
+
+## Read the Requirements
+
+- The Workshop knowledgebase is the source of truth. [PRD.md](PRD.md) captures the agreed requirements; [ROADMAP.md](ROADMAP.md) defines capability milestones.
+- Resolve genuine requirements ambiguity with the user; do not invent requirements.
+
+## Foreman Only Orchestrates
+
+- Use the Foreman agent as the primary interface and sole workflow orchestrator.
+- Foreman scopes requests, invokes routing, delegates work, consumes handoffs, and coordinates progression and routine orchestration failures.
+- Foreman may inspect enough context to coordinate. Delegate substantive investigation, implementation, testing execution, and independent review.
+- Delegate Git/worktree operations, PR creation, merging, and cleanup to agents or skills. Foreman must not perform those mechanics directly.
+- Workers perform only their assignment. Do not expand scope, redesign the workflow, redelegate, or reroute. Return blockers to Foreman.
+- Use each agent's handoff contract from its definition.
+
+## Route and Isolate Work
+
+- Use JEV for bounded agent, skill, model, reasoning, and reviewer selections according to the routing skills. Honor successful, usable selections.
+- Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
+- Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
+- Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
+- Use Herdr's capabilities to create one worktree per implementation task after routing resolves. Reuse it sequentially through implementation, review, remediation, and publication.
+- Only one role actively operates on a task worktree at a time. Keep target project repositories independent of Workshop.
+- Independent tasks may proceed within harness capabilities. Pause only the workflow requiring user clarification.
+
+## Verify, Review, and Finish
+
+- Craftsmen implement and run relevant checks; Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings.
+- Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
+- Delegate publication after review. Publication must not modify implementation.
+- Wait for explicit user merge authorization, then delegate merge execution. Review approval and PR creation do not authorize merging.
+- After successful authorized merge, delegate `/workshop-clear-bench` and consume its result. Release owned resources before handoff, preserve unrelated work, and avoid force deletion.
+- Use shorter workflows for work such as read-only investigation when appropriate. The user may redirect or stop any workflow.
+
+## Keep It Simple
+
+- Prefer direct solutions and existing capabilities. Build the smallest useful capability and use it on real work before adding complexity.
+- Do not add speculative abstractions, dependencies, role hierarchies, harness adapters, retry frameworks, or cleanup recovery engines.
+- Test required outcomes, important safety boundaries, and demonstrated regressions. Do not freeze incidental architecture or require tests that mirror implementation details.
+- Add agents, skills, and defensive machinery when real usage demonstrates a need.
