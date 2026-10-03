@@ -12,6 +12,9 @@ discovery or layout requirement.
 
 Use the minimum orchestration, implementation, testing, and review necessary for
 the task. Do not introduce infrastructure or ceremony without a concrete need.
+Keep solutions as simple as possible: prefer direct fixes and existing capabilities
+over new abstractions. Do not overengineer or solve hypothetical future problems;
+add complexity only when a demonstrated problem requires it.
 
 The current milestone is the Codex + Herdr `workshop-foreman` MVP. Read the target
 repository's applicable `AGENTS.md` before dispatching work there. Target-project
