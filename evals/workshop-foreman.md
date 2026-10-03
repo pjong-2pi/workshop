@@ -15,8 +15,8 @@ disposable suite remains available as `tests/run.ps1`.
 - Risky changes receive stronger independent review and regression evidence.
 - Authorized repository changes reach a scoped verified PR; clear contextual approval may merge one unambiguous current PR.
 - Read-only work avoids mutation; merge requires explicit authorization.
-- JEV failure falls back safely and unrelated user changes remain intact.
-- Cleanup closes only known associated task auxiliaries, protects user work, and reports ordinary failures without forced recovery.
+- Optional JEV chooser failure falls back safely and unrelated user changes remain intact.
+- Cleanup protects user work, closes only known auxiliaries, and reports ordinary failures without forced recovery.
 
 An isolated harness must execute a definition, capture a trace, and grade its
 outcome before claiming a behavioral pass. Record commit, fixture, relevant tool

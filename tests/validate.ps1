@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$skills = @('workshop-foreman', 'workshop-setup', 'workshop-clear-bench', 'workshop-stocktake', 'github-create-pr', 'github-check-pr', 'github-merge-pr')
+$skills = @('workshop-foreman', 'workshop-delegate', 'jev-choose-skill', 'jev-choose-agent', 'jev-choose-model', 'workshop-setup', 'workshop-clear-bench', 'workshop-stocktake', 'github-create-pr', 'github-check-pr', 'github-merge-pr')
 $profiles = @('master-craftsman', 'inspector', 'master-inspector', 'fitter')
 $required = @('AGENTS.md', 'README.md', 'WORKFLOWS.md', '.gitignore', '.codex/config.toml', 'catalog/models.md',
-    'scripts/setup.ps1', 'scripts/check-environment.ps1', 'scripts/jev-routing.ps1', 'tests/run.ps1',
+    'scripts/setup.ps1', 'scripts/check-environment.ps1', 'scripts/jev-choose.ps1', 'tests/run.ps1',
     '.agents/skills/workshop-clear-bench/scripts/remove-workspace.ps1',
     '.agents/skills/workshop-stocktake/scripts/update-model-catalog.ps1',
     'evals/skill-evals.json', 'evals/workshop-foreman.md')

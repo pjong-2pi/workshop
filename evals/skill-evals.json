@@ -131,7 +131,8 @@
       "fixture": "one-current-verified-pull-request-awaiting-decision",
       "expect": {
         "skill_invoked": [
-          "github-merge-pr"
+          "github-merge-pr",
+          "workshop-clear-bench"
         ],
         "skill_not_invoked": []
       },
@@ -159,11 +160,12 @@
       "fixture": "ready-visible-codex-worker",
       "expect": {
         "skill_invoked": [
-          "workshop-foreman"
+          "workshop-foreman",
+          "workshop-delegate"
         ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Prompts only after the expected Codex worker has matching pane/workspace identity, readiness, and session evidence.",
+      "pass_condition": "Uses delegated dispatch and prompts only after the expected Codex worker has matching pane/workspace identity, readiness, and session evidence.",
       "trace": "worker name, kind, pane, workspace, readiness, session, and prompt"
     },
     {
@@ -172,11 +174,12 @@
       "fixture": "missing-visible-codex-worker",
       "expect": {
         "skill_invoked": [
-          "workshop-foreman"
+          "workshop-foreman",
+          "workshop-delegate"
         ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Stops and reports the failed visible-session invariant without prompting or substituting an internal agent.",
+      "pass_condition": "Delegated dispatch stops and reports the failed visible-session invariant without prompting or substituting an internal agent.",
       "trace": "start/get evidence and stopped dispatch"
     },
     {
@@ -215,7 +218,8 @@
         ],
         "skill_not_invoked": [
           "github-create-pr",
-          "github-merge-pr"
+          "github-merge-pr",
+          "workshop-clear-bench"
         ]
       },
       "pass_condition": "Inspects the exact PR and binds findings to the observed head without mutation.",

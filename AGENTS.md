@@ -25,6 +25,8 @@ real workflow needs them.
 - All implementation belongs to delegated workers; Foreman remains
   orchestration-only.
 - Substantive delegated edits belong in dedicated worker worktrees.
+- Foreman owns orchestration; skills own mechanics; agents hold delegated roles;
+  JEV is optional bounded advice and cannot replace judgment, authorization, or delegation.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
   authorization required by the target repository and the user.

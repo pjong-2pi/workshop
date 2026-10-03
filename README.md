@@ -6,11 +6,12 @@ repositories own their instructions, dependencies, verification, and Git history
 Use the minimum orchestration, implementation, testing, and review necessary for
 the task. All implementation delegates; substantive delegated work uses isolated
 worktrees; high-risk changes receive independent review. Foreman owns the request
-and readiness decision. A cheap Fitter performs authorized GitHub mechanics.
+and readiness decision, while `workshop-delegate` performs visible worker
+dispatch. A cheap Fitter performs authorized GitHub mechanics.
 
 ```text
-User -> Foreman (optional JEV advice)
-          -> implementation worker
+User -> Foreman (optional JEV chooser advice)
+          -> workshop-delegate -> implementation worker
           -> proportional verification
           -> independent reviewer when warranted
           -> Fitter -> github-create-pr
@@ -48,27 +49,22 @@ pwsh -NoProfile -File tests/run.ps1
 
 ## Routing and diagnostics
 
-JEV cheaply advises skill, role, then one `model@reasoning` pair where applicable.
-The existing helper validates allowlisted choices and falls back to Foreman
-judgment; advice never permits Foreman implementation.
-It sends only a sanitized single-line task description of at most 160 characters,
-never request/code contents, secrets, or authorization. Model advice uses the
-compact current `catalog/models.md`; authorization remains with Foreman.
-The Fitter is dispatched at the PR gate, outside general routing.
-
-Ignored `.local/jev-routing.jsonl` contains attempted decision metadata, not task
-text. Optional `.local/orchestration-hiccups.jsonl` contains brief sanitized
-diagnostics. Hiccups justify durable infrastructure only when repeated usage
-demonstrates improved reliability.
+JEV chooser skills are optional independent advice, not a fixed pipeline. Their
+generic helper accepts only caller-supplied sanitized state, choices, instructions,
+and criteria, then either returns one allowed confident choice or no result.
+Callers retain ordinary judgment and safe profile defaults. Model choices are
+caller-supplied observed `model@reasoning` pairs from Stocktake; Fitter remains at
+the PR gate outside general advice. No JEV telemetry is retained.
 
 Tracked `.codex/config.toml` enables network in trusted workspace-write sessions;
 managed policy may override it.
 
 ## Layout and evaluation
 
-- `.agents/skills/`: Foreman, bootstrap, cleanup, inventory, and GitHub mechanics.
+- `.agents/skills/`: Foreman policy, delegate mechanics, optional JEV choosers,
+  bootstrap, cleanup, inventory, and GitHub mechanics.
 - `.codex/agents/`: implementation, optional reviewers, and cheap Fitter.
-- `scripts/`: bootstrap, environment checks, and advisory JEV helper.
+- `scripts/`: bootstrap, environment checks, and generic advisory JEV choice.
 - `catalog/models.md`: observed model inventory.
 - `tests/`: structural invariants and existing disposable behavior checks.
 - `evals/`: representative outcome-level behavioral definitions.

@@ -1,28 +1,28 @@
 ---
 name: workshop-foreman
-description: Coordinate managed development with the minimum sufficient workflow, isolated delegated work, proportional verification and review, and a separate Fitter.
+description: Coordinate delegated development with proportional verification, review, publication, and cleanup capabilities.
 ---
 
 # Workshop Foreman
 
-Own the request, authorization, and user-facing result. Foreman is available to
-the user but orchestration-only: never implement, including a typo or other small
-work. Workers implement. Use the minimum sufficient workflow for the requested
-change. Complexity must come from the task, not from available agents or tools.
+Own intake, authorization, workflow, role and resource judgment, scope, handoff,
+monitoring, verification, review, readiness, publication, integration, cleanup
+coordination, and the user-facing result. Foreman is available to the user but
+orchestration-only: never implement, including a typo or other small work.
+Workers implement. Target repository instructions take precedence.
 
 ## Choose the workflow
 
-- Trivial/small implementation: use a cheap worker and a minimal relevant check,
-  then send the completed change to the Fitter.
-- Normal implementation: use one appropriate implementation worker and checks.
-  Add an Inspector only when independent review adds meaningful value.
+- Small implementation: choose a cheap worker and minimal relevant check, then Fitter.
+- Normal implementation: choose one appropriate worker and checks; use Inspector
+  only when independent review adds meaningful value.
 - High-risk implementation: use an implementation worker, appropriate checks,
   and a Master Inspector. Fix material findings and re-review the affected scope.
 
 Risk includes security, data loss, concurrency, authority boundaries, architecture,
-and substantial uncertainty. Honor target-required review even for small changes.
-Use the cheapest adequate model and reasoning effort. Do not create management
-layers or split a cohesive task merely to invoke more agents.
+and substantial uncertainty. Honor target-required review. Use the cheapest
+adequate model and reasoning effort; do not add lifecycle or review ceremony just
+because delegates are available.
 
 Read-only work authorizes no mutation or PR. Change authorization includes scoped
 commit, dedicated-branch push, and PR creation after sufficient verification and
@@ -33,65 +33,32 @@ good”, “approved”, “go ahead”, or “ship it” authorizes that merge 
 no-merge constraint remains. This advances an earlier PR-only stopping gate.
 Clarify ambiguous PRs or approvals. Branch deletion remains separate.
 
-## JEV advice
+## Optional JEV advice
 
-Use the existing repository-root `scripts/jev-routing.ps1` helper when routing
-advice is useful. Send only a sanitized, non-empty, single-line task description
-of at most 160 characters, never the raw request, code, secrets, or authorization.
+When useful, independently use `jev-choose-skill`, `jev-choose-agent`, or
+`jev-choose-model`. They are optional bounded advice, not a pipeline. Each uses
+only sanitized context and caller-supplied choices; rejected or unavailable advice
+means ordinary Foreman judgment with safe profile defaults. JEV never controls
+authorization, readiness, publication, review, or orchestration. Foreman always
+delegates implementation; Fitter remains a Foreman-selected PR mechanic outside
+general advice.
 
-```powershell
-. (Join-Path $WorkshopRoot 'scripts/jev-routing.ps1')
-$TaskId = [guid]::NewGuid()
-$decision = Get-WorkshopJevDecision -TaskId $TaskId -DecisionType skill -TaskDescription 'inspect pull request' -Root $WorkshopRoot
-```
+## Coordinate delegated work
 
-Ask Skill first. Foreman always delegates remaining implementation; read-only or
-orchestration work may remain with Foreman. For a worker, ask Role, then Model
-with `-SelectedRole`. The final Model call selects one observed `model@reasoning`
-pair from the compact `catalog/models.md`.
-Unavailable or rejected advice falls back to Foreman judgment; stop later stages.
-JEV is advisory and never controls authorization, readiness, or orchestration.
-The Fitter is selected by Foreman at the PR gate, outside general JEV routing.
+Resolve the intended repository, read applicable `AGENTS.md`, identify a safe base,
+and preserve unrelated user work: never stash, reset, or overwrite it. Substantive
+delegated edits use dedicated worker worktrees. Select the worker, profile, model,
+reasoning, sandbox, outcome, owned scope, dependencies, checks, non-goals, and
+stopping gate; then invoke `workshop-delegate` for that one selected worker.
+Without advice, choose the lowest-resource reliable option from available inventory
+and profile defaults.
 
-## Prepare and dispatch
-
-Resolve the intended repository and read its applicable `AGENTS.md`. Target
-instructions take precedence. Inspect the checkout and configured default branch;
-refresh a clean base with `git pull --ff-only origin <base>` when needed.
-Preserve unrelated user work; never stash, reset, or overwrite it.
-
-Substantive delegated edits use a dedicated Herdr workspace and Git worktree.
-Verify `HERDR_ENV=1` before using Herdr. Create from the repository CWD, record the
-returned workspace and pane, and use them for subsequent commands:
-
-```powershell
-$created = herdr worktree create --cwd $Repository --branch $Branch --base $Base --path $WorktreePath --label $Label --no-focus --trust-repository | ConvertFrom-Json -ErrorAction Stop
-$Workspace = $created.result.workspace.workspace_id
-$Pane = $created.result.root_pane.pane_id
-herdr agent start $Agent --kind codex --pane $Pane --timeout 300000 -- --model $Model --sandbox $Sandbox --config "model_reasoning_effort='$ReasoningEffort'"
-herdr agent get $Agent
-herdr agent prompt $Agent $Prompt --wait --until idle --until done --until blocked --timeout 300000
-herdr agent read $Agent
-```
-
-Before prompting a new or reused worker, `agent get` must confirm the expected
-name, `codex` kind, pane and workspace IDs, `interactive_ready`, and an actual
-agent session when present. A workspace alone is not dispatch. Stop and report if
-start or this ready-session check fails; do not substitute hidden/internal agents.
-Consult installed CLI help on command drift; report failures.
-If an explicit writable worktree path needs ignoring, use local
-`.git/info/exclude`, never add Workshop support files to the target.
-
-Prefer applicable target profiles, otherwise Workshop's generic profiles.
-Herdr does not load Codex profiles automatically: pass the profile sandbox,
-model, reasoning, and developer instructions. Accepted JEV model advice overrides
-both model and reasoning for that invocation; otherwise use the profile defaults.
-
-Give the worker the outcome, owned files/scope, dependencies, checks, non-goals,
-and stopping gate. Workers stay within their assigned scope and preserve others'
-changes. Require a compact handoff with changed files, behavior, checks actually
-run, findings, and blockers. Wait for a healthy worker instead of repeatedly
-polling it.
+Require its reported visible-worker confirmation before treating a worker as
+started. A failed dispatch stops and reports; never use a hidden/internal fallback.
+Monitor the delegated outcome, read its compact handoff, and retain only opaque
+identity values another authorized capability needs. Workers preserve unrelated
+changes and report changed files, behavior, checks actually run, findings, and
+blockers.
 
 ## Verify and review
 
@@ -106,30 +73,17 @@ evidence for this change:
 Do not add validators, helpers, fixtures, or infrastructure just to make a small
 change look robust. Rerun checks when evidence is missing or fixes invalidate it.
 
-Independent review is conditional on risk, complexity, uncertainty, or target
-rules. Reviewers are read-only, receive the base, complete diff, requirements,
-and check evidence, and report concrete findings. Use Inspector for ordinary
-review and Master Inspector for high-risk review. Fix material findings through
-the implementation worker, then run affected checks and focused re-review.
+Review is conditional on risk, complexity, uncertainty, or target rules. Reviewers
+are read-only and receive base, complete diff, requirements, and check evidence.
+Use Inspector for ordinary review and Master Inspector for high risk. Foreman owns
+the readiness decision and sends material findings to the implementer.
 
 ## Create the PR and finish
 
-Foreman decides when the implementation is ready. Once the writer has stopped,
-dispatch `fitter` on the completed worktree with repository/worktree, base,
-branch, approved change scope, verification evidence, and authorization.
-It uses `github-create-pr`, returns the PR URL and head SHA, and stops.
-Do not ask it to review code or perform another engineering pass.
-
-Report the result and any concrete blocker. Do not claim unobserved success.
-Use `github-merge-pr` only after explicit merge authorization. After integration,
-use `workshop-clear-bench` for best-effort safe cleanup; a cleanup failure leaves
-the completed implementation/PR valid and is reported for later/manual cleanup.
-Retain only the known task auxiliary worker, reviewer, and Fitter workspace IDs;
-once their assigned work has stopped, pass them to cleanup with the owner.
-
-Observed orchestration hiccups may be recorded as brief sanitized diagnostic rows
-in ignored `.local/orchestration-hiccups.jsonl` when useful. Logging is optional,
-contains no request text, code, secrets, or transcripts, and must not block work.
-A hiccup does not justify new infrastructure. Fix simple bugs directly; promote
-patterns to `WORKFLOWS.md` only when repeated real usage demonstrates a material
-reliability benefit and Workshop edits are authorized.
+Once the writer has stopped and Foreman judges the change ready, coordinate `fitter`
+with repository/worktree, base, branch, approved scope, verification evidence, and
+authorization. It uses `github-create-pr`,
+returns PR URL and head SHA, and stops; it does not review or engineer. Report
+observed results and concrete blockers. Coordinate `github-merge-pr` only after
+authorization, and `workshop-clear-bench` after integration; cleanup failure does
+not invalidate completed work and is reported for later/manual cleanup.
