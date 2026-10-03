@@ -6,9 +6,12 @@ description: Merge an exact explicitly authorized GitHub pull request after fres
 # GitHub Merge PR
 
 Require explicit user authorization for the intended repository and exact PR.
-PR creation, code approval, or JEV advice alone does not imply merge authorization;
-after one unambiguous current PR is awaiting the user's decision, clear contextual
-approval may authorize that PR unless a current no-merge constraint remains.
+PR creation, code approval, or JEV advice alone does not imply merge authorization.
+A preparation instruction to create/update a PR and not merge stops at that PR
+handoff; it is not a permanent veto. Once one exact, unambiguous current PR has
+been handed off for a decision, clear contextual approval may authorize its merge
+and safe verified postmerge cleanup without another prompt. Honor a continuing
+no-merge constraint unless explicitly revoked; clarify ambiguous PRs or approval.
 Confirm identity and inspect current state immediately before merging:
 
 ```sh

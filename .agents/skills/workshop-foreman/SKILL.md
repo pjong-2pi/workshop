@@ -26,12 +26,15 @@ because delegates are available.
 
 Read-only work authorizes no mutation or PR. Change authorization includes scoped
 commit, dedicated-branch push, and PR creation after sufficient verification and
-any required review, unless the user sets an earlier gate. Merge requires explicit
-authorization for the exact PR; after Foreman has handed off one unambiguous
-current PR awaiting a decision, clear contextual approval such as “LGTM”, “looks
-good”, “approved”, “go ahead”, or “ship it” authorizes that merge unless a current
-no-merge constraint remains. This advances an earlier PR-only stopping gate.
-Clarify ambiguous PRs or approvals. Branch deletion remains separate.
+any required review, unless the user sets an earlier gate. A preparation instruction
+such as "create the PR; do not merge" stops at the PR handoff; it does not
+permanently prohibit merging. After handing off one exact, unambiguous current PR
+for a decision, clear contextual approval such as "LGTM", "looks good", "approved",
+"go ahead", or "ship it" explicitly authorizes that PR's merge and safe verified
+postmerge cleanup, advancing that stop without another prompt. Honor a continuing
+constraint such as "do not merge until release", "never merge automatically", or
+"approval means review only" unless the user explicitly revokes it. Clarify
+ambiguous PRs or approvals. Branch deletion remains separate.
 
 ## Optional JEV advice
 
