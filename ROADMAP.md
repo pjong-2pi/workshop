@@ -25,6 +25,9 @@ paths that may disappear. Keep each change focused.
   activity prevented a global byte-identical snapshot claim. Cleanup reliability
   across ordinary tasks still needs the stabilization checkpoint below. Mock tests
   alone are not live-process evidence.
+- [PR #16](https://github.com/7wwtwinkletoes/workshop/pull/16) completed Stocktake
+  startup diagnostics and documented approved execution when sandbox access fails;
+  it preserves the catalog on failure. No repeat work is planned here.
 - Reported incidents and code-path gaps are not claims of executed eval passes.
   Model inventory descriptions are not measured cost or performance rankings.
 
