@@ -28,6 +28,11 @@ if ($owner.workspace_id -cne $Workspace -or [string]::IsNullOrWhiteSpace($owner.
 $listing = & herdr worktree list --cwd $Repository --trust-repository
 if ($LASTEXITCODE -ne 0) { throw 'Could not inspect owning worktree.' }
 $matches = @(($listing | Out-String | ConvertFrom-Json).result.worktrees | Where-Object { $_.open_workspace_id -ceq $Workspace })
+if ($matches.Count -eq 0) {
+    $stalePath = $owner.worktree.checkout_path
+    if ([string]::IsNullOrWhiteSpace($stalePath)) { throw 'Owning worktree is missing or ambiguous.' }
+    throw "Herdr workspace '$Workspace' remains after Git removed its worktree registration; checkout directory '$stalePath' requires manual resolution."
+}
 if ($matches.Count -ne 1 -or [string]::IsNullOrWhiteSpace($matches[0].path)) { throw 'Owning worktree is missing or ambiguous.' }
 $worktree = (Resolve-Path -LiteralPath $matches[0].path).Path
 if ($worktree -ieq $Repository) { throw 'Cleanup must not remove the repository checkout.' }
@@ -65,9 +70,15 @@ foreach ($auxiliary in @($AuxiliaryWorkspace | Select-Object -Unique)) {
     $panes = & herdr pane list --workspace $auxiliary
     if ($LASTEXITCODE -ne 0) { throw "Could not inspect auxiliary workspace '$auxiliary'." }
     $matches = @(($panes | Out-String | ConvertFrom-Json).result.panes)
-    if (-not $matches.Count -or @($matches | Where-Object { $_.workspace_id -cne $auxiliary -or [string]::IsNullOrWhiteSpace($_.cwd) -or (Resolve-Path -LiteralPath $_.cwd).Path -ine $worktree -or $_.agent -cne 'codex' -or [string]::IsNullOrWhiteSpace($_.agent_session) -or $_.agent_status -notin @('idle', 'done', 'blocked') }).Count) {
+    if (-not $matches.Count -or @($matches | Where-Object { $_.workspace_id -cne $auxiliary -or [string]::IsNullOrWhiteSpace($_.pane_id) -or [string]::IsNullOrWhiteSpace($_.cwd) -or (Resolve-Path -LiteralPath $_.cwd).Path -ine $worktree -or $_.agent -cne 'codex' -or [string]::IsNullOrWhiteSpace($_.agent_session) -or $_.agent_status -notin @('idle', 'done') }).Count) {
         throw "Auxiliary workspace '$auxiliary' is not a stopped Codex task workspace for the owning worktree."
     }
+}
+
+$ownerPanes = & herdr pane list --workspace $Workspace
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect owning workspace panes.' }
+if (@(($ownerPanes | Out-String | ConvertFrom-Json).result.panes | Where-Object { $_.agent_status -in @('working', 'blocked') }).Count) {
+    throw 'Owning workspace has an active pane.'
 }
 
 if ($PSCmdlet.ShouldProcess($worktree, 'remove completed Herdr worktree')) {
@@ -79,8 +90,13 @@ if ($PSCmdlet.ShouldProcess($worktree, 'remove completed Herdr worktree')) {
     if ($LASTEXITCODE -ne 0) {
         throw "Cleanup failed for '$Workspace'; leave it for later/manual cleanup. Completed implementation or PR remains valid."
     }
-    $remaining = & herdr worktree list --cwd $Repository --trust-repository
-    if ($LASTEXITCODE -ne 0 -or @(($remaining | Out-String | ConvertFrom-Json).result.worktrees | Where-Object { $_.open_workspace_id -ceq $Workspace -or $_.path -ieq $worktree }).Count) {
-        throw "Cleanup not confirmed for '$Workspace'; inspect later/manual cleanup."
+    if (Test-Path -LiteralPath $worktree) { throw "Cleanup not confirmed for '$Workspace'; checkout directory remains at '$worktree'." }
+    $registrations = & git -C $Repository worktree list --porcelain
+    if ($LASTEXITCODE -ne 0) { throw "Cleanup not confirmed for '$Workspace'; could not inspect Git worktree registration." }
+    if (@($registrations | Where-Object { $_ -match '^worktree ' -and [IO.Path]::GetFullPath($_.Substring(9)) -ieq $worktree }).Count) {
+        throw "Cleanup not confirmed for '$Workspace'; Git worktree registration remains for '$worktree'."
     }
+    $workspaceList = & herdr workspace list
+    if ($LASTEXITCODE -ne 0) { throw "Cleanup not confirmed for '$Workspace'; could not inspect Herdr workspaces." }
+    if (@(($workspaceList | Out-String | ConvertFrom-Json).result.workspaces | Where-Object { $_.workspace_id -ceq $Workspace }).Count) { throw "Cleanup not confirmed for '$Workspace'; Herdr workspace remains." }
 }

@@ -86,6 +86,9 @@ Report only orchestration-level `started`, `completed`, `blocked`, or `failed`,
 the selected worker identity, compact handoff, and concrete blocker. Keep
 workspace/pane IDs opaque. Never pass a role workspace as an auxiliary for a
 different checkout: cleanup is separate for each role checkout and only with its
-own matching merged evidence or explicit discard. Report an old review-head
-cleanup limit rather than forcing it. Consult installed CLI help only for command
-drift.
+own matching merged evidence or explicit discard. Include in the delegated prompt
+that the worker must await tool commands and finish or stop only its own recorded
+background tool sessions before handoff; if it cannot, it must disclose the
+cleanup blocker rather than report completion. Report an old review-head cleanup
+limit rather than forcing it.
+Consult installed CLI help only for command drift.

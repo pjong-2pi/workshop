@@ -22,13 +22,16 @@ For explicit discard, replace the GitHub parameters with
 `OWNER/REPO` from `gh repo view --json nameWithOwner`; verified integration
 requires no second permission prompt. Ensure assigned workers have stopped.
 `KnownAuxiliaryWorkspaces` contains only the task's worker, reviewer, or Fitter
-workspace IDs retained by Foreman. After validating each supplied auxiliary's pane
-metadata and worktree association, cleanup closes only those auxiliaries, keeps the
-owner live, then makes one normal removal attempt.
+workspace IDs retained by Foreman. After validating each supplied auxiliary's
+idle/done Codex pane metadata and worktree association, cleanup closes only those
+workspaces, keeps the owner live, then makes one normal removal attempt.
 
 The script verifies identity, cleanliness, and disposition, then uses normal
 `herdr worktree remove --workspace <id> --trust-repository`. It does not discover
 or close unrelated workspaces, force-delete, delete branches, or substitute
-filesystem/Git deletion. If auxiliary closure, the OS, or the tool fails, report
-the failure and leave it for later/manual cleanup. This does not invalidate the
-completed implementation or PR.
+filesystem/Git deletion. Success requires the checkout directory, Git worktree
+registration, and Herdr workspace to be gone. If Git has already lost its
+registration while Herdr or the directory remains, report that concrete stale
+state without forced recovery. If terminal closure, the OS, or the tool fails,
+report the failure and leave it for later/manual cleanup. This does not invalidate
+the completed implementation or PR.
