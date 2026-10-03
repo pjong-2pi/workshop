@@ -46,8 +46,9 @@ general advice.
 ## Coordinate delegated work
 
 Resolve the intended repository, read applicable `AGENTS.md`, identify a safe base,
-and preserve unrelated user work: never stash, reset, or overwrite it. Substantive
-delegated edits use dedicated worker worktrees. Select the worker, profile, model,
+and preserve unrelated user work: never stash, reset, or overwrite it. Delegated
+implementation must use an isolated working context that preserves unrelated user
+work. Select the worker, profile, model,
 reasoning, sandbox, outcome, owned scope, dependencies, checks, non-goals, and
 stopping gate; then invoke `workshop-delegate` for that one selected worker.
 Without advice, choose the lowest-resource reliable option from available inventory
@@ -81,7 +82,7 @@ the readiness decision and sends material findings to the implementer.
 ## Create the PR and finish
 
 Once the writer has stopped and Foreman judges the change ready, coordinate `fitter`
-with repository/worktree, base, branch, approved scope, verification evidence, and
+with repository and working context, base, branch, approved scope, verification evidence, and
 authorization. It uses `github-create-pr`,
 returns PR URL and head SHA, and stops; it does not review or engineer. Report
 observed results and concrete blockers. Coordinate `github-merge-pr` only after
