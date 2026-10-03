@@ -17,11 +17,12 @@ matching live worker when the returned existing-worktree pane is occupied;
 otherwise start the selected worker in its unused role shell. Never replace an
 unrelated existing session. Every role workspace must be a
 worktree-backed sibling grouped by Herdr under the canonical target repository.
-Foreman supplies a distinct `WorktreePath`, `Branch`, and `Base` for every new
-role. Implementation starts from its safe base; after its scoped commit and
-verification, reviewer and Fitter worktrees start from that exact implementation
-HEAD. The Fitter's branch is the supplied final publishing branch. Use generic
-`workspace create` for none of these roles. A supplied `ExistingWorktree` is
+Foreman supplies selected target-project context; for later roles it also supplies
+the exact verified result. This capability resolves role-specific execution details
+within that context. Implementation starts from its safe base; after its scoped
+commit and verification, reviewer and Fitter worktrees start from that exact
+implementation HEAD. The Fitter's branch is the supplied final publishing branch.
+Use generic `workspace create` for none of these roles. A supplied `ExistingWorktree` is
 only the same role's already-created checkout: open it with `worktree open --cwd
 <Repository> --path <ExistingWorktree>`. Start the selected worker when its
 returned role shell is unused; when occupied, reuse only a matching live worker.

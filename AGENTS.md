@@ -5,6 +5,8 @@
 Build a portable orchestration workspace for coding agents. Workshop coordinates
 work; each managed repository remains independent and owns its project rules,
 architecture, verification commands, dependencies, and Git history.
+Managed projects normally live under `projects/`; this is a convention, not a
+discovery or layout requirement.
 
 ## Current scope
 
@@ -20,13 +22,13 @@ real workflow needs them.
 
 ## Boundaries
 
-- The Foreman owns intake, delegation, monitoring, verification, review, and
-  the user-facing result.
-- All implementation belongs to delegated workers; Foreman remains
-  orchestration-only.
-- Substantive delegated edits belong in dedicated worker worktrees.
-- Foreman owns orchestration; skills own mechanics; agents hold delegated roles;
-  JEV is optional bounded advice and cannot replace judgment, authorization, or delegation.
+- Foreman owns orchestration policy and outcomes for selected target projects
+  without depending on physical layout. Harness, tool, session, workspace,
+  worktree, transport, and provider behavior belong to the implementing
+  capability skill. Foreman requires isolation, exact-result, verification, and safe
+  cleanup guarantees without prescribing their implementation; agents hold
+  delegated roles, JEV is optional bounded advice that cannot replace Foreman
+  judgment, authorization, or delegation, and Foreman does not implement.
 - Never add Workshop support files to a managed repository merely to integrate it.
 - Never stash, reset, force-clean, merge, push, or delete branches without the
   authorization required by the target repository and the user.

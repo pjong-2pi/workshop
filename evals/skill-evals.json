@@ -29,8 +29,8 @@
           "workshop-setup"
         ]
       },
-      "pass_condition": "Delegates even this small implementation to one cheap worker, uses relevant existing checks with no new tests or mandatory reviewer, and a Fitter returning an open PR without merge.",
-      "trace": "agent invocations/models, changed scope, checks and PR URL/head SHA"
+      "pass_condition": "Delegates the selected target project's small implementation to one cheap worker, uses relevant existing checks with no new tests or mandatory reviewer, and hands its exact verified result to a Fitter returning an open PR without merge.",
+      "trace": "target identity, agent invocations/models, changed scope, checks, exact result, and PR URL/head SHA"
     },
     {
       "id": "normal-implementation",
@@ -45,8 +45,8 @@
           "workshop-setup"
         ]
       },
-      "pass_condition": "Delegates cohesive implementation to an isolated worker, runs appropriate existing checks and focused behavior coverage where needed, uses independent review only when it adds value, and reaches an authorized PR.",
-      "trace": "owned scope/worktree, evidence, review decision and PR"
+      "pass_condition": "Delegates cohesive selected-target implementation in isolation, runs appropriate existing checks and focused behavior coverage where needed, uses independent review only when it adds value, and hands the exact verified result to an authorized PR workflow.",
+      "trace": "target identity, isolated owned scope, evidence, exact-result handoff, review decision, and PR"
     },
     {
       "id": "risky-implementation",
@@ -61,8 +61,8 @@
           "github-merge-pr"
         ]
       },
-      "pass_condition": "Uses an isolated implementation worker, focused regression coverage, and Master Inspector; material findings receive fixes, affected checks and focused re-review before PR creation.",
-      "trace": "regression evidence, independent review/fixes and PR URL/head SHA"
+      "pass_condition": "Uses an isolated selected-target implementation worker, focused regression coverage, and Master Inspector; material findings receive fixes, affected checks, and focused re-review before the exact verified result reaches PR creation.",
+      "trace": "target identity, regression evidence, exact-result handoff, independent review/fixes, and PR URL/head SHA"
     },
     {
       "id": "fitter",
@@ -192,8 +192,8 @@
         ],
         "skill_not_invoked": []
       },
-      "pass_condition": "Preserves unrelated user edits, delegates scoped work in isolation from a safe base, and excludes unrelated files and commits from the PR. Stops if no safe base/scope can be resolved.",
-      "trace": "before/after unrelated content, isolated diff and scoped staging"
+      "pass_condition": "Preserves unrelated user edits in the selected target, delegates scoped work in isolation, and excludes unrelated files and commits from the PR. Stops if target identity, safe context, or scope cannot be resolved.",
+      "trace": "target identity, before/after unrelated content, isolated diff, and scoped staging"
     },
     {
       "id": "jev-fallback",
