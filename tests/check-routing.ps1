@@ -125,6 +125,7 @@ try {
     $global:apiFailure = $true
     $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'API failure did not fall back.'
+    Assert ($fallback.reason -eq 'TypeSafe request failed: mock API unavailable') 'Routing lost the original helper error from its structured fallback.'
     $global:apiFailure = $false
     Remove-Item Env:\TYPESAFE_API_KEY
     $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json

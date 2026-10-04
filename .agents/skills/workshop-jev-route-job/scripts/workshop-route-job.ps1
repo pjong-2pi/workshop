@@ -35,7 +35,7 @@ try {
     $inputJson = @{ state = @{ assignment = $Assignment; requirements = $Requirements; kind = $Kind }; questions = $questions } | ConvertTo-Json -Depth 20 -Compress
     $script = Join-Path $PSScriptRoot 'workshop-jev-choice.ps1'
     $raw = & $script -InputJson $inputJson -Endpoint $Endpoint 2>&1
-    if (-not $?) { throw 'JEV request failed.' }
+    if (-not $?) { throw ($raw -join [Environment]::NewLine) }
     $answers = $raw | ConvertFrom-Json -AsHashtable
     $selected = $answers.resource.choice
     $result = @{ status = 'selected'; kind = $Kind; resource = $selected }

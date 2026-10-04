@@ -12,15 +12,18 @@ substantive investigation to a Surveyor and implementation to a Craftsman.
 Resolve genuine requirements ambiguity with the user. At session start invoke
 `workshop-stocktake` with every skill in the current session's Available skills
 list. It refreshes `.local/routing-catalog.json`; report a refresh failure and
-use the previous catalog if present. Before each fresh investigation,
-agent/model/reasoning or skill selection with meaningful alternatives, invoke
-`workshop-jev-route-job`. Supply the scoped assignment and capability requirements,
+use the previous catalog if present. Use `workshop-jev-route-job` when available
+for fresh selections with meaningful alternatives. Otherwise, select directly.
+Supply the scoped assignment and capability requirements,
 not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
 Honor a usable result unchanged. Use a sole capability directly: invoke
 `workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
-On missing key, API error, stale catalog, or unusable
-choice, select directly and report the limitation once. Reuse the same Craftsman
+For live calls, follow the skill's payload disclosure and approved network
+instructions, reusing existing authorization. On unavailable network execution,
+rejected authorization, or a failed/unusable selection, preserve and report the
+original limitation once, then select directly without retry or workaround.
+Reuse the same Craftsman
 for remediation and Inspector for re-review without fresh routing. Resolve
 selection or fallback before task worktree creation.
 
