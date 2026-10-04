@@ -19,7 +19,7 @@
 
 ## Route and Isolate Work
 
-- Use JEV for bounded agent, skill, model, reasoning, and reviewer selections according to the routing skills. Honor successful, usable selections.
+- JEV is optional: invoke it for bounded selections only when its routing skill is available through normal discovery and there are meaningful alternatives. If absent, select directly and proceed normally; its presence is never a prerequisite. Honor successful, usable selections.
 - Give JEV task/capability requirements, not a preselected concrete agent. Use sole capabilities directly, including `workshop-publish` after review; consult JEV only for meaningful alternatives.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
@@ -42,6 +42,7 @@
 
 ## Keep It Simple
 
+- Optional tools remain optional: absence or failure must not block tasks achievable directly with existing agent capabilities. Prefer graceful fallback; do not add environment-specific workarounds, recovery, retries, or abstractions to make an optimization mandatory. Distinguish required outcomes from incidental environment evidence.
 - Distinguish intentional Workshop requirements from incidental tool behavior. Enforce the former. Do not promote the latter into new invariants, validation, recovery logic, or tests unless correctness, safety, or a demonstrated regression requires it.
 - Before retaining a mechanism, ask: explicit requirement, correctness/safety need, or demonstrated failure? If none applies, defer it.
 - Prefer direct solutions and existing capabilities. Build the smallest useful capability and use it on real work before adding complexity.

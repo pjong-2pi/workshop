@@ -5,11 +5,11 @@ description: Route a fresh Workshop agent or skill selection through JEV using t
 
 # Route Job
 
-Use for **fresh** agent/model/reasoning or skill selections with meaningful alternatives. Supply the assignment and capability requirements, not a preferred concrete identity. If there is no choice, use the available capability directly: the sole publication capability is `workshop-publish`, invoked after Inspector PASS/LGTM without JEV. Reuse the assigned Craftsman for remediation and Inspector for re-review. Stocktake runs independently at session start.
+JEV is optional. Foreman invokes this skill for **fresh** agent/model/reasoning or skill selections only when it is available through normal discovery and there are meaningful alternatives. If absent, select directly and proceed normally; its presence is never a prerequisite. Supply the assignment and capability requirements, not a preferred concrete identity. If there is no choice, use the available capability directly: the sole publication capability is `workshop-publish`, invoked after Inspector PASS/LGTM without JEV. Reuse the assigned Craftsman for remediation and Inspector for re-review. Stocktake runs independently at session start.
 
 Live calls send the assignment, requirements, full role definitions, and available skill/model metadata to `https://api.typesafe.ai/v1/systemone`, authenticated with the existing `TYPESAFE_API_KEY`. Disclose this normal routing payload and destination when obtaining authorization; reuse existing authorization for that scope and never print the key.
 
-Invoke live helpers through Codex's normal approved network-enabled shell execution (`exec_command` with `sandbox_permissions: "require_escalated"` and a justification naming the destination and payload). The observed sandbox sets `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY` to `http://127.0.0.1:9`; the ordinary approved escalated shell has no such proxies. Do not change or unset proxies, bypass the sandbox, or retry through another path. If approval is rejected, respect it, report the rejection and stated reason, and use direct selection.
+Invoke live helpers through the harness's approved network-enabled path. Never alter proxies, bypass the sandbox, or try alternate network paths. If network-enabled execution is unavailable or authorization is rejected, respect that result, preserve and report the original failure or rejection reason, and use direct selection without retrying.
 
 Call the helper from any project directory using explicit Workshop paths in that approved execution context:
 

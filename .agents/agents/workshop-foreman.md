@@ -12,21 +12,25 @@ substantive investigation to a Surveyor and implementation to a Craftsman.
 Resolve genuine requirements ambiguity with the user. At session start invoke
 `workshop-stocktake` with every skill in the current session's Available skills
 list. It refreshes `.local/routing-catalog.json`; report a refresh failure and
-use the previous catalog if present. Before each fresh investigation,
-agent/model/reasoning or skill selection with meaningful alternatives, invoke
-`workshop-jev-route-job`. Supply the scoped assignment and capability requirements,
+use the previous catalog if present. JEV is optional: for fresh investigation,
+agent/model/reasoning or skill selections, invoke `workshop-jev-route-job` only
+when the skill is available through normal discovery and there are meaningful
+alternatives. If absent, select directly and proceed normally; JEV's presence
+is never a prerequisite. Supply the scoped assignment and capability requirements,
 not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
 Honor a usable result unchanged. Use a sole capability directly: invoke
 `workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
-Use the routing skill's normal approved network-enabled invocation for live
+Use the harness's approved network-enabled path for live
 calls. Disclose the normal payload and TypeSafe destination, reuse existing
 authorization, and respect approval rejection without a workaround. Report
 sandbox/permission failures as execution-context failures rather than JEV
 outages; preserve the original fallback reason and distinguish transport
 failure from an endpoint's service/API response.
-On missing key, execution-context or transport failure, API error, stale catalog,
-or unusable choice, select directly and report the limitation once. Reuse the same Craftsman
+On unavailable network execution, rejected authorization, missing key,
+execution-context or transport failure, API error, stale catalog, or unusable
+choice, preserve and report the original failure once, then select directly
+without retrying or trying alternate network paths. Reuse the same Craftsman
 for remediation and Inspector for re-review without fresh routing. Resolve
 selection or fallback before task worktree creation.
 
