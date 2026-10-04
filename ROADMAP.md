@@ -9,8 +9,7 @@ Milestones describe capabilities and evidence of completion, not dates or a
 prescribed implementation topology. The initial environment is Windows with
 Codex + Herdr installed; helper scripts are `.ps1` files.
 
-Milestones 1 and 2 are complete. Milestone 3 is partially implemented with
-Inspector and same-session remediation/re-review. Milestone 4 is partially
+Milestones 1, 2, and 3 are complete. Milestone 4 is partially
 implemented with publication; merge and cleanup are not implemented.
 Milestone 5 remains planned.
 
@@ -119,7 +118,7 @@ Recorded demonstration evidence:
   generic read-only evidence gathering. This capability test did not dispatch work.
 
 Milestone 2 covers Stocktake and bounded JEV routing. Review and publication
-implementation belongs to the partially implemented milestones below.
+implementation belongs to Milestones 3 and 4 below.
 Task context and catalog candidates went directly to JEV; no quantitative
 token saving is claimed.
 
@@ -145,7 +144,7 @@ Observed friction and remedy before further roadmap features:
 
 ## Milestone 3 — Independent Review and Remediation
 
-Status: PARTIALLY IMPLEMENTED — Inspector and the remediation/re-review path exist.
+Status: COMPLETE — Independent Inspector review and same-session remediation/re-review.
 
 Outcome: Foreman coordinates an independent review loop before publication.
 
@@ -172,9 +171,10 @@ Recorded demonstration evidence:
 - Inspector initially found that PR creation was not bound to origin's push
   repository and committed branch changes were not checked against publication
   scope. The same Craftsman session remediated both findings with focused
-  regressions. The same Inspector independently re-reviewed and returned
+  regressions. The same Inspector session independently re-reviewed and returned
   PASS/LGTM with sufficient regression coverage. Inspector made no fixes;
-  roles operated sequentially in the same task worktree.
+  roles operated sequentially in the same task worktree. Foreman coordinated
+  the handoffs without performing implementation or review.
 
 ## Milestone 4 — Delegated Publication, Merge, and Cleanup
 
