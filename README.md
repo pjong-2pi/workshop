@@ -29,6 +29,7 @@ session; they are not automatically registered Codex agent types.
 | [workshop-craftsman](.agents/agents/workshop-craftsman.md) | Implement a scoped change and verify it |
 | [workshop-surveyor](.agents/agents/workshop-surveyor.md) | Investigate a scoped question read-only |
 | [workshop-inspector](.agents/agents/workshop-inspector.md) | Independently review changes and test sufficiency read-only |
+| [workshop-fitter](.agents/agents/workshop-fitter.md) | Publish reviewed scope through `workshop-publish` |
 | [workshop-dispatch](.agents/skills/workshop-dispatch/SKILL.md) | Native Herdr isolation, role launch, and handoff retrieval |
 | [workshop-stocktake](.agents/skills/workshop-stocktake/SKILL.md) | Discover session resources and refresh the local routing catalog |
 | [workshop-jev-route-job](.agents/skills/workshop-jev-route-job/SKILL.md) | Make and validate bounded JEV selections |
@@ -48,7 +49,8 @@ concrete agent. JEV receives all
 available agents or skills and, for an agent, all selectable model/reasoning
 pairs. Foreman checks the selected role's boundaries; a usable selection goes
 unchanged to dispatch. Consult JEV only for meaningful alternatives; invoke the
-sole `workshop-publish` capability directly after review. Missing TypeSafe access
+Fitter is routed for mechanical publication after review and invokes the sole
+`workshop-publish` capability directly. Missing TypeSafe access
 or an unusable answer triggers the PRD's direct-selection fallback. Set
 `TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
 Workshop. The routing skill gives the exact invocation and typed script inputs.
@@ -117,10 +119,11 @@ assessment. Missing Inspector availability blocks review.
 
 For implementation tasks, Foreman continues after Craftsman COMPLETE through
 Inspector review, remediation in the same Craftsman and re-review in the same
-Inspector session, then delegated publication until a PR exists, unless blocked
-or the user pauses. After PASS/LGTM, `workshop-publish` stages only Foreman's
-explicit reviewed file list, commits, pushes, and creates the PR. Worker COMPLETE
-does not finish the task; PR creation does not authorize merging.
+Inspector session, then Fitter publication until a PR exists, unless blocked
+or the user pauses. After PASS/LGTM, Fitter invokes `workshop-publish` with
+Foreman's explicit reviewed file list, commits, pushes, and creates or updates
+the identified PR. Worker COMPLETE does not finish the task; PR creation does
+not authorize merging.
 
 Craftsman runs checks relevant to the assigned change and reports commands,
 actual results, and limitations. For a documentation change, check local links

@@ -40,14 +40,19 @@ function global:gh {
         'https://github.com/example/project'
         return
     }
-    Assert ($items[0] -eq 'pr' -and $items[1] -eq 'create') 'Unexpected gh operation.'
     $repoIndex = [array]::IndexOf($items,'--repo')
     Assert ($repoIndex -ge 0 -and $items[$repoIndex+1] -eq 'https://github.com/example/project') 'PR destination was affected by ambient GH_REPO.'
+    if ($items[0] -eq 'pr' -and $items[1] -eq 'view') {
+        $global:viewCalls++
+        $global:LASTEXITCODE = 0
+        return ($global:existingPr | ConvertTo-Json -Compress)
+    }
+    Assert ($items[0] -eq 'pr' -and $items[1] -in @('create','edit')) 'Unexpected gh operation.'
     Assert ((Get-Location).Path -eq $global:testWorktree) 'PR creation used the caller directory instead of the task.'
     $bodyIndex = [array]::IndexOf($items,'--body-file')
     Assert ([IO.File]::ReadAllText($items[$bodyIndex+1]) -eq "Reviewed body`nwith a second line") 'PR body was altered.'
     if ($global:failPr) { $global:LASTEXITCODE = 1; return }
-    'https://github.com/example/project/pull/1'
+    if ($items[1] -eq 'edit') { 'https://github.com/example/project/pull/26' } else { 'https://github.com/example/project/pull/1' }
 }
 try {
     [IO.File]::WriteAllText((Join-Path $temporary 'reviewed.md'),'reviewed implementation')
@@ -79,12 +84,36 @@ try {
     Assert ($published.status -eq 'published' -and $published.committed -and $published.pushed -and $published.pr -match '/pull/1$') 'Publication outcome missing.'
     Assert ($global:stagedFiles.Count -eq 1 -and $global:stagedFiles[0] -eq 'reviewed.md') 'Staging exceeded reviewed scope.'
     Assert ([IO.File]::ReadAllText((Join-Path $temporary 'reviewed.md')) -eq 'reviewed implementation' -and [IO.File]::ReadAllText((Join-Path $temporary 'unrelated.md')) -eq 'unrelated work') 'Publication changed implementation or unrelated work.'
+    $parameters.Pr = 'https://github.com/example/project/pull/26'
+    $global:existingPr = @{url='https://github.com/example/project/pull/26';state='OPEN';headRefName='task';baseRefName='main';headRepository=@{nameWithOwner='example/project'}}
+    $global:viewCalls = 0
+    $global:branchFiles = @()
+    $global:stagedFiles = @()
+    $global:commands.Clear()
+    $updated = & $script @parameters | ConvertFrom-Json
+    Assert ($updated.status -eq 'published' -and $updated.pr -match '/pull/26$' -and $global:viewCalls -eq 1) 'Existing PR was not validated and updated.'
+    Assert (@($global:commands | Where-Object { $_[0] -eq 'pr' -and $_[1] -eq 'edit' }).Count -eq 1 -and @($global:commands | Where-Object { $_[0] -eq 'pr' -and $_[1] -eq 'create' }).Count -eq 0) 'Existing PR path created a duplicate or skipped edit.'
+    foreach ($case in @(
+        @{name='repository';changes=@{url='https://github.com/other/project/pull/26'}},
+        @{name='closed';changes=@{state='CLOSED'}},
+        @{name='head';changes=@{headRefName='other'}},
+        @{name='base';changes=@{baseRefName='release'}},
+        @{name='fork';changes=@{headRepository=@{nameWithOwner='contributor/project'}}}
+    )) {
+        $global:existingPr = @{url='https://github.com/example/project/pull/26';state='OPEN';headRefName='task';baseRefName='main';headRepository=@{nameWithOwner='example/project'}}
+        foreach ($key in $case.changes.Keys) { $global:existingPr[$key] = $case.changes[$key] }
+        $global:commands.Clear()
+        $result = & $script @parameters 2>$null
+        Assert (-not $? -and -not $result) "Existing PR accepted mismatched $($case.name)."
+        Assert (@($global:commands | Where-Object { $_[2] -in @('--literal-pathspecs','commit','push') -or ($_[0] -eq 'pr' -and $_[1] -eq 'edit') }).Count -eq 0) "Existing PR $($case.name) rejection occurred after mutation."
+    }
+    $parameters.Remove('Pr')
     $global:failPr = $true
     $global:stagedFiles = @()
     $global:commands.Clear()
     $result = & $script @parameters 2>$null
     Assert (-not $? -and -not $result -and @($global:commands | Where-Object { $_[0] -eq 'pr' }).Count -eq 1) 'Native publication failure was ignored or retried.'
-    'PASS: publication path/branch/committed scope, scoped staging, explicit PR repository despite GH_REPO, unchanged files, and native failure.'
+    'PASS: publication scope, existing PR validation/update, pre-mutation mismatch rejection, explicit PR repository, unchanged files, and native failure.'
 } finally {
     $env:GH_REPO = $savedGhRepo
     Remove-Item Function:\git,Function:\gh -ErrorAction SilentlyContinue

@@ -7,7 +7,8 @@ param(
     [Parameter(Mandatory)][string]$CommitMessage,
     [Parameter(Mandatory)][string]$Title,
     [Parameter(Mandatory)][AllowEmptyString()][string]$Body,
-    [Parameter(Mandatory)][string]$Base
+    [Parameter(Mandatory)][string]$Base,
+    [string]$Pr
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,6 +33,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI authentication unavailable.' }
     $repository = & gh repo view $origin --json url --jq .url
     if ($LASTEXITCODE -ne 0 -or -not $repository) { throw 'Cannot resolve the origin push repository with GitHub CLI.' }
+    if ($Pr) {
+        $existing = & gh pr view $Pr --repo $repository --json url,state,headRefName,baseRefName,headRepositoryOwner,headRepository --jq '.' | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0 -or -not $existing) { throw 'Cannot resolve the supplied existing PR.' }
+        if ($existing.url -notmatch ('^' + [regex]::Escape($repository.TrimEnd('/')) + '/pull/\d+$')) { throw 'Existing PR does not belong to the origin push repository.' }
+        if ($existing.state -ne 'OPEN') { throw 'Existing PR is not open.' }
+        if ($existing.headRefName -ne $Branch -or $existing.baseRefName -ne $Base) { throw 'Existing PR head branch or base does not match the requested publication.' }
+        if (-not $existing.headRepository -or $existing.headRepository.nameWithOwner -ne (($repository -replace '^https?://github\.com/','').TrimEnd('/'))) { throw 'Existing PR is from a fork or another repository.' }
+    }
     if (-not $Files.Count) { throw 'An explicit scoped file list is required.' }
     $scoped = foreach ($file in $Files) {
         if (-not $file -or [IO.Path]::IsPathRooted($file)) { throw 'Scoped files must be repository-relative.' }
@@ -58,8 +67,12 @@ try {
         [IO.File]::WriteAllText($bodyPath,$Body)
         Push-Location -LiteralPath $Worktree
         try {
-            $url = & gh pr create --repo $repository --base $Base --head $Branch --title $Title --body-file $bodyPath
-            if ($LASTEXITCODE -ne 0) { throw "gh pr create failed (exit $LASTEXITCODE)." }
+            if ($Pr) {
+                $url = & gh pr edit $Pr --repo $repository --title $Title --body-file $bodyPath
+            } else {
+                $url = & gh pr create --repo $repository --base $Base --head $Branch --title $Title --body-file $bodyPath
+            }
+            if ($LASTEXITCODE -ne 0) { throw "gh pr operation failed (exit $LASTEXITCODE)." }
         } finally { Pop-Location }
     } finally { if (Test-Path -LiteralPath $bodyPath) { Remove-Item -LiteralPath $bodyPath } }
     @{ status='published'; branch=$Branch; pr=($url -join "`n"); committed=$committed; pushed=$pushed } | ConvertTo-Json -Compress

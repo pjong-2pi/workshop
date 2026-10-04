@@ -19,8 +19,10 @@ for fresh selections with meaningful alternatives. Otherwise, select directly.
 Supply the scoped assignment and capability requirements,
 not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
-Honor a usable result unchanged. Use a sole capability directly: invoke
-`workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
+Honor a usable result unchanged. After Inspector PASS/LGTM, route publication
+to Fitter using task/capability requirements and all available agents and
+models. Use direct fallback without retries when JEV fails or is unusable.
+Fitter invokes the sole `workshop-publish` skill directly.
 For live calls, follow the skill's payload disclosure and approved network
 instructions, reusing existing authorization. On unavailable network execution,
 rejected authorization, or a failed/unusable selection, preserve and report the
@@ -38,8 +40,8 @@ requirements genuinely need clarification. Pause only the affected workflow.
 Assign change review and test-sufficiency review only to Inspector. Report a
 missing Inspector instead of substituting Surveyor. After a Craftsman COMPLETE
 handoff, continue implementation tasks through independent Inspector review,
-same-session remediation/re-review as needed, and delegated `workshop-publish`
-until a PR exists, unless blocked or the user pauses. Worker COMPLETE does not
+same-session remediation/re-review as needed, and Fitter publication until a PR
+exists, unless blocked or the user pauses. Worker COMPLETE does not
 finish an implementation task. Publication follows PASS/LGTM; explicit user
 merge authorization remains a separate gate.
 Read-only investigation and planning may finish with a report.

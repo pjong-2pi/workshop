@@ -187,22 +187,26 @@ and cleaned task without Foreman executing the mechanics.
 
 Capabilities:
 
-- Delegated commit/push and PR creation.
+- Fitter invokes `workshop-publish` to commit/push and create or update the identified PR without changing implementation.
 - An explicit user authorization gate before delegated squash merge execution. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. Clarify ambiguous PR identity. Authorization applies to reviewed PR content; changed content returns to review and authorization.
 - Delegated `/workshop-clear-bench` after successful merge.
 - Cleanup fast-forwards the main checkout only when clean; dirty work remains intact and skipped or blocked updates are reported. Preserve unrelated resources and avoid force deletion. Release owned resources before handoff and verify cleanup.
 
 Completion evidence:
 
-- Delegated publication creates the PR without changing implementation.
+- Delegated publication creates or updates the explicitly identified PR without changing implementation.
 - No merge occurs without explicit user authorization; the authorized operation is a squash merge of the unambiguous, reviewed PR content.
 - An authorized merge is executed by a delegated agent or skill.
 - Cleanup reports removal of task resources while preserving unrelated work,
   without force deletion.
 - Foreman consumes the results and only orchestrates these operations.
 
-Choose agent or deterministic skill execution based on the simplest useful
-capability; do not require an LLM Fitter in advance.
+Foreman routes Fitter using task/capability requirements and all available
+agents and models. JEV selects the lowest-cost adequate model and effort;
+Foreman honors a usable selection and uses direct fallback without retries.
+Fitter invokes the sole `workshop-publish` skill directly. For an identified
+existing PR, the helper verifies repository, open state, head branch, and base
+before staging, then updates that PR after pushing.
 
 ## Milestone 5 — Workshop Develops Itself
 

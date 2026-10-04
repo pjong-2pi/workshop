@@ -5,11 +5,12 @@ description: Commit and push an independently approved implementation task and c
 
 # Publish
 
-Foreman invokes this deterministic skill after consuming the independent
-Inspector's PASS/LGTM for the current change. Confirm that verdict covers the
-files being published and that blocking findings are resolved. Craftsman and
-Inspector do not execute publication. This skill never edits implementation,
-merges, or cleans task resources.
+The selected Fitter invokes this deterministic skill after Foreman supplies
+the independent Inspector's PASS/LGTM and reviewed scope for the current
+change. Confirm that verdict covers the files being published and that blocking
+findings are resolved. Foreman selects Fitter and coordinates its handoff;
+Craftsman and Inspector do not execute publication. This skill never edits
+implementation, merges, or cleans task resources.
 
 Run the helper using its absolute Workshop path from any project directory:
 
@@ -19,6 +20,12 @@ Run the helper using its absolute Workshop path from any project directory:
     -ReviewVerdict PASS -CommitMessage $commitMessage `
     -Title $prTitle -Body $prBody -Base $targetBase
 ```
+
+When Foreman identifies an existing PR for this reviewed update, pass its
+explicit URL or number with `-Pr $existingPr`. The helper verifies that it is
+open, belongs to origin's push repository, and has the requested head branch
+and base before staging. It then updates that PR's title and body after the
+scoped commit and push. Omit `-Pr` to create a new PR as usual.
 
 `-Files` contains explicit repository-relative files, including reviewed new
 files and deletions. The helper verifies the root and branch, rejects paths

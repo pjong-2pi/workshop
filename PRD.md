@@ -33,20 +33,19 @@ The knowledgebase is local and excluded from Git. This tracked PRD makes the pro
 | Role or capability | Responsibility | Boundary |
 | --- | --- | --- |
 | User | Define intent, clarify requirements, authorize merges, redirect or stop work | Merge authorization belongs to the user |
-| Foreman agent | Scope, invoke routing, delegate, consume handoffs, coordinate progression and routine orchestration failures | Does not implement, substantively investigate, review, manage Git/worktrees, create PRs, merge, or clean up directly |
+| Foreman agent | Scope, invoke routing, delegate, consume handoffs, coordinate progression and routine orchestration failures | Does not implement, substantively investigate, review, manage Git/worktrees, publish, merge, or clean up directly |
 | JEV routing skills | Make bounded selections using available resources and task context | Do not execute the selected work |
 | Stocktake | Discover available routing resources and maintain the durable catalog | Agent definitions remain the source of agent metadata |
 | Delegation capability | Execute assignments through Herdr and arrange task isolation | Foreman retains workflow decisions |
 | Surveyor | Investigate the assigned question read-only and report evidence | Does not modify files, implement, review changes, or delegate further |
 | Craftsman | Implement the assigned scope, add appropriate tests, verify, and report | Does not expand scope or delegate further |
 | Inspector | Independently review read-only and assess test sufficiency | Does not fix findings |
-| Publication capability | Commit/push as required and create the PR | Does not modify implementation or fix engineering findings |
+| Fitter | Invoke `workshop-publish` with Foreman's reviewed scope to commit/push and create or update the identified PR | Does not modify implementation or fix engineering findings |
 | Merge capability | Execute the explicitly user-authorized merge | Does not infer authorization from review or PR creation |
 | Clear Bench | Clean task resources after successful authorized merge and verify cleanup | Does not force deletion or discard unrelated work |
 
-Publication, merge, and cleanup may use delegated agents or skills. Whether
-publication needs an LLM Fitter is a decision for real usage, not a required
-initial architecture.
+Publication uses a routed Fitter to invoke the existing skill. Merge and cleanup
+remain delegated operations.
 
 ## Workflow
 
@@ -58,7 +57,7 @@ Foreman owns progression throughout the standard implementation route:
 4. Consume the Craftsman's implementation and verification handoff.
 5. Select a reviewer under the same routing rule and delegate independent Inspector review.
 6. Send blocking findings to the same Craftsman session, then arrange re-review in the same Inspector session until PASS/LGTM.
-7. Delegate publication and receive the PR result.
+7. Route publication to Fitter with task/capability requirements and selected model/effort; Fitter invokes `workshop-publish` and returns the publication result.
 8. Wait for explicit user merge authorization.
 9. Delegate merging and inspect the reported result.
 10. After successful merge, delegate Clear Bench cleanup and consume its result.
@@ -87,7 +86,7 @@ Merge execution still requires separate explicit user authorization.
 - Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly.
 - Supply all available agents and all available models rather than pre-filtering those lists. Selection must respect the assignment's role and capabilities.
 - Supply task/capability requirements instead of preselecting a concrete agent. Check the selected resource against role boundaries before dispatch.
-- Consult JEV only for meaningful alternatives. Invoke a sole capability directly; `workshop-publish` requires Inspector PASS/LGTM and does not need JEV selection.
+- Consult JEV for meaningful agent/model alternatives. Select Fitter using all available agents and models; Fitter invokes the sole `workshop-publish` skill directly.
 - Agent, model, and reasoning effort may be selected in one query.
 - Successful, usable JEV selections are authoritative.
 - If JEV fails, is unavailable, or returns an unusable choice, Foreman selects directly. Do not introduce elaborate retries or recovery.
@@ -117,7 +116,7 @@ Reference: [JEV with coding agents](https://docs.typesafe.ai/introduction/coding
 - Inspectors review code and diffs, assess test sufficiency, and run appropriate non-mutating checks. Report PASS/LGTM, blocking findings, or non-blocking findings.
 - Change review and test-sufficiency review belong only to Inspector. Surveyor investigation must not substitute for review; report an unavailable Inspector as a missing prerequisite.
 - Blocking findings must be remediated and re-reviewed before publication.
-- PR creation, merging, and cleanup are always delegated; Foreman only orchestrates.
+- Fitter invokes `workshop-publish` using Foreman's reviewed scope after PASS/LGTM. Existing PR mode requires an explicit PR identifier validated against origin repository, open state, head branch, and base before staging. Fitter does not change implementation. Merging and cleanup remain delegated; Foreman only orchestrates.
 - Only explicit user authorization permits merge execution. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. If PR identity is ambiguous, clarify rather than guess. Authorization applies to reviewed PR content; changed content returns to review and authorization.
 - After authorization, Foreman delegates a squash merge. After confirmed successful merge, Foreman delegates `/workshop-clear-bench` cleanup.
 - Agents release resources they own before handing off. Cleanup fast-forwards the main checkout only when clean. Dirty work remains intact and skipped or blocked updates are reported. Preserve unrelated resources and avoid force deletion.
