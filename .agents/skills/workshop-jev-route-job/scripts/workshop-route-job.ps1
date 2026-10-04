@@ -19,6 +19,9 @@ try {
         $options[$resource.name] = $description
     }
     $questions = @{ resource = @{ instructions = "Select the available $Kind that satisfies state.requirements for state.assignment. Respect every supplied role boundary; select resources yourself without assuming a preferred identity."; criteria = $options } }
+    if ($Kind -eq 'agent') {
+        $questions.resource.instructions += ' workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker. Select another agent whose role and capabilities satisfy the assignment.'
+    }
     $pairs = @{}
     if ($Kind -eq 'agent') {
         foreach ($model in @($catalog.models | Where-Object available)) {
@@ -38,6 +41,9 @@ try {
     if (-not $?) { throw ($raw -join [Environment]::NewLine) }
     $answers = $raw | ConvertFrom-Json -AsHashtable
     $selected = $answers.resource.choice
+    if ($Kind -eq 'agent' -and $selected -eq 'workshop-foreman') {
+        throw 'Unusable agent choice: workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker.'
+    }
     $result = @{ status = 'selected'; kind = $Kind; resource = $selected }
     if ($Kind -eq 'agent') {
         $pair = $answers.model_reasoning.choice
