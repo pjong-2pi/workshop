@@ -19,8 +19,14 @@ not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
 Honor a usable result unchanged. Use a sole capability directly: invoke
 `workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
-On missing key, API error, stale catalog, or unusable
-choice, select directly and report the limitation once. Reuse the same Craftsman
+Use the routing skill's normal approved network-enabled invocation for live
+calls. Disclose the normal payload and TypeSafe destination, reuse existing
+authorization, and respect approval rejection without a workaround. Report
+sandbox/permission failures as execution-context failures rather than JEV
+outages; preserve the original fallback reason and distinguish transport
+failure from an endpoint's service/API response.
+On missing key, execution-context or transport failure, API error, stale catalog,
+or unusable choice, select directly and report the limitation once. Reuse the same Craftsman
 for remediation and Inspector for re-review without fresh routing. Resolve
 selection or fallback before task worktree creation.
 

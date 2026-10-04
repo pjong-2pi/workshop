@@ -14,4 +14,4 @@ try {
         if ($choice -isnot [string] -or -not $item.Value.criteria.Contains($choice)) { throw "TypeSafe chose an unknown option for '$($item.Key)'." }
     }
     $answers | ConvertTo-Json -Depth 30 -Compress
-} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
+} catch { Write-Error -Message $_.Exception.Message -ErrorAction Continue; exit 1 }

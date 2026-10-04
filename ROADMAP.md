@@ -123,6 +123,26 @@ implementation belongs to the partially implemented milestones below.
 Task context and catalog candidates went directly to JEV; no quantitative
 token saving is claimed.
 
+Observed friction and remedy before further roadmap features:
+
+- Later sandbox calls encountered `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY`
+  set to `http://127.0.0.1:9`, while the ordinary approved escalated shell had
+  no proxies. The helper targets `https://api.typesafe.ai/v1/systemone`.
+  This is execution-context friction; Milestone 2's successful live calls
+  remain recorded evidence, and the sandbox failure does not establish a
+  service outage.
+- Routing and Foreman instructions now specify the normal approved
+  network-enabled invocation, disclosure of the normal routing payload,
+  respecting approval rejection, and direct selection without retries or proxy
+  changes. Structured fallback preserves the original helper error so Foreman
+  can distinguish execution-context, transport, and service/API failures.
+  A focused mocked regression covers error preservation.
+- Foreman subsequently used the main checkout helper through the ordinary
+  approved network-enabled invocation. It reached `api.typesafe.ai` and returned
+  a usable reviewer selection: `workshop-inspector` with `gpt-6.1-sol/high`.
+  This demonstrates the approved invocation path; it does not validate the
+  changed helper in this task worktree.
+
 ## Milestone 3 — Independent Review and Remediation
 
 Status: PARTIALLY IMPLEMENTED — Inspector and the remediation/re-review path exist.
