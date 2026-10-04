@@ -36,8 +36,8 @@
 - Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
 - Delegate publication after review. Publication must not modify implementation.
 - Continue implementation tasks autonomously through review and delegated publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
-- Wait for explicit user merge authorization, then delegate merge execution. Review approval and PR creation do not authorize merging.
-- After successful authorized merge, delegate `/workshop-clear-bench` and consume its result. Release owned resources before handoff, preserve unrelated work, and avoid force deletion.
+- Wait for explicit user merge authorization, then delegate a squash merge. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. Clarify ambiguous PR identity. Authorization applies to reviewed PR content; changed content returns to review and authorization.
+- After confirmed successful merge, delegate `/workshop-clear-bench` and consume its result. Cleanup fast-forwards the main checkout only when clean; dirty work remains intact and skipped or blocked updates are reported. Release owned resources before handoff, preserve unrelated resources, and avoid force deletion.
 - Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple

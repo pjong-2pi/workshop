@@ -118,9 +118,9 @@ Reference: [JEV with coding agents](https://docs.typesafe.ai/introduction/coding
 - Change review and test-sufficiency review belong only to Inspector. Surveyor investigation must not substitute for review; report an unavailable Inspector as a missing prerequisite.
 - Blocking findings must be remediated and re-reviewed before publication.
 - PR creation, merging, and cleanup are always delegated; Foreman only orchestrates.
-- Only explicit user authorization permits merge execution.
-- Agents release resources they own before handing off.
-- `/workshop-clear-bench` performs ordinary cleanup plus essential verification after successful authorized merge. Preserve unrelated work and avoid force deletion.
+- Only explicit user authorization permits merge execution. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. If PR identity is ambiguous, clarify rather than guess. Authorization applies to reviewed PR content; changed content returns to review and authorization.
+- After authorization, Foreman delegates a squash merge. After confirmed successful merge, Foreman delegates `/workshop-clear-bench` cleanup.
+- Agents release resources they own before handing off. Cleanup fast-forwards the main checkout only when clean. Dirty work remains intact and skipped or blocked updates are reported. Preserve unrelated resources and avoid force deletion.
 
 ## First-Version Acceptance
 

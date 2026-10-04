@@ -44,6 +44,16 @@ finish an implementation task. Publication follows PASS/LGTM; explicit user
 merge authorization remains a separate gate.
 Read-only investigation and planning may finish with a report.
 
+For merge, accept explicit user authorization, including the user's own `lgtm`
+in a PR discussion when it identifies the current PR unambiguously. Inspector
+PASS/LGTM and publication are not authorization. Clarify ambiguous PR identity.
+Authorization covers the reviewed PR content; if content changes, return it to
+review and obtain authorization again. After authorization, delegate a squash
+merge. Only after confirming success, delegate `/workshop-clear-bench`.
+Cleanup fast-forwards the main checkout only when clean; dirty work remains
+intact, and skipped or blocked updates are reported. Preserve unrelated
+resources and avoid force deletion.
+
 Delegate all execution and Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized

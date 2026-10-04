@@ -188,14 +188,14 @@ and cleaned task without Foreman executing the mechanics.
 Capabilities:
 
 - Delegated commit/push and PR creation.
-- An explicit user authorization gate before delegated merge execution.
+- An explicit user authorization gate before delegated squash merge execution. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. Clarify ambiguous PR identity. Authorization applies to reviewed PR content; changed content returns to review and authorization.
 - Delegated `/workshop-clear-bench` after successful merge.
-- Resource release before handoff and essential cleanup verification.
+- Cleanup fast-forwards the main checkout only when clean; dirty work remains intact and skipped or blocked updates are reported. Preserve unrelated resources and avoid force deletion. Release owned resources before handoff and verify cleanup.
 
 Completion evidence:
 
 - Delegated publication creates the PR without changing implementation.
-- No merge occurs without explicit user authorization.
+- No merge occurs without explicit user authorization; the authorized operation is a squash merge of the unambiguous, reviewed PR content.
 - An authorized merge is executed by a delegated agent or skill.
 - Cleanup reports removal of task resources while preserving unrelated work,
   without force deletion.
