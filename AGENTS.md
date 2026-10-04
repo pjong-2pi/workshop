@@ -19,7 +19,7 @@
 
 ## Route and Isolate Work
 
-- JEV is optional: invoke it for bounded selections only when its routing skill is available through normal discovery and there are meaningful alternatives. If absent, select directly and proceed normally; its presence is never a prerequisite. Honor successful, usable selections.
+- Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly. Honor successful, usable selections.
 - Give JEV task/capability requirements, not a preselected concrete agent. Use sole capabilities directly, including `workshop-publish` after review; consult JEV only for meaningful alternatives.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.

@@ -14,8 +14,9 @@ the visible Spaces root. In the current Codex session, ask:
 Read AGENTS.md, PRD.md, ROADMAP.md, and
 .agents/agents/workshop-foreman.md. Act as workshop-foreman.
 Scope my request and delegate execution through workshop-dispatch.
-Run workshop-stocktake at session start. For fresh selections, use workshop-jev-route-job
-only if normally discoverable and there are meaningful alternatives; otherwise select directly.
+Run workshop-stocktake at session start.
+Use workshop-jev-route-job when available for fresh selections with meaningful alternatives.
+Otherwise, select directly.
 ```
 
 Role definitions are Markdown instructions loaded explicitly into each native
@@ -40,10 +41,8 @@ and the native Codex model catalog. It writes Git-ignored
 `intelligence` ratings survive refreshes; new models remain unrated and absent
 models stay unavailable. On refresh failure the previous catalog remains intact.
 
-JEV is optional. Before a fresh role or skill selection, Foreman uses
-`workshop-jev-route-job` only when it is available through normal discovery and
-there are meaningful alternatives; if absent, select directly and proceed
-normally. Its presence is never a prerequisite. When routing, give the scoped
+Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives.
+Otherwise, select directly. When routing, give the scoped
 assignment and capability requirements without preselecting a
 concrete agent. JEV receives all
 available agents or skills and, for an agent, all selectable model/reasoning

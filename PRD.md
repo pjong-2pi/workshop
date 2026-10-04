@@ -53,10 +53,10 @@ initial architecture.
 Foreman owns progression throughout the standard implementation route:
 
 1. Scope the user request and resolve genuine requirements ambiguity.
-2. Select execution resources directly, or invoke JEV when its routing skill is normally discoverable and there are meaningful alternatives.
+2. Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly.
 3. Delegate Herdr-backed task worktree creation and the implementation assignment.
 4. Consume the Craftsman's implementation and verification handoff.
-5. Select a reviewer under the same optional routing rule and delegate independent Inspector review.
+5. Select a reviewer under the same routing rule and delegate independent Inspector review.
 6. Send blocking findings to the same Craftsman session, then arrange re-review in the same Inspector session until PASS/LGTM.
 7. Delegate publication and receive the PR result.
 8. Wait for explicit user merge authorization.
@@ -84,8 +84,7 @@ Merge execution still requires separate explicit user authorization.
 
 ### JEV Routing
 
-- JEV is optional for bounded decisions such as selecting an agent, skill, model, reasoning effort, or reviewer. Invoke it only when the routing skill is available through normal discovery and there are meaningful alternatives.
-- If the routing skill is absent, Foreman selects directly and proceeds normally; JEV's presence is never a prerequisite.
+- Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly.
 - Supply all available agents and all available models rather than pre-filtering those lists. Selection must respect the assignment's role and capabilities.
 - Supply task/capability requirements instead of preselecting a concrete agent. Check the selected resource against role boundaries before dispatch.
 - Consult JEV only for meaningful alternatives. Invoke a sole capability directly; `workshop-publish` requires Inspector PASS/LGTM and does not need JEV selection.
