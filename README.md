@@ -170,7 +170,7 @@ fast check and need only run for relevant changes.
 ## Planned progression
 
 Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
-partially implemented with Inspector and same-session remediation/re-review.
+complete: independent Inspector review and same-session remediation/re-review.
 Milestone 4 is partially implemented with `workshop-publish`; merge and
 `workshop-clear-bench` do not yet exist. Merge still requires explicit user
 authorization. The full end-to-end demonstration is Milestone 5.
