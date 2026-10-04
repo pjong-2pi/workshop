@@ -9,7 +9,8 @@ Milestones describe capabilities and evidence of completion, not dates or a
 prescribed implementation topology. The initial environment is Windows with
 Codex + Herdr installed; helper scripts are `.ps1` files.
 
-All milestones are planned. These documents do not implement the capabilities.
+Milestone 1 is complete: implementation, native demonstrations, and final
+independent review passed. Milestones 2–5 remain planned.
 
 ## Milestone 1 — Foreman and Delegated Execution
 
@@ -21,6 +22,7 @@ Capabilities:
 - Foreman as the primary interface and sole orchestrator.
 - Delegation through Herdr, including its worktree creation capabilities.
 - Craftsman execution with relevant verification and a role-specific handoff.
+- Separate Surveyor investigation with read-only execution and an evidence handoff.
 - Blocked handoffs returned to Foreman without worker redelegation.
 
 Completion evidence:
@@ -28,11 +30,28 @@ Completion evidence:
 - Foreman coordinates a scoped Workshop change in one isolated task worktree.
 - The Craftsman returns changed scope, verification results, and any blockers
   through the contract in its agent definition.
-- A delegated read-only investigation returns a report without creating a PR.
+- A delegated Surveyor investigation returns a read-only report without creating a PR.
 - Foreman does not implement, substantively investigate, or manage Git/worktrees.
 
 Routing may use the PRD's direct-selection fallback while JEV is unavailable.
 This milestone does not constitute the complete first version.
+
+Recorded demonstration evidence:
+
+- Native Herdr dispatch loaded a separate read-only Surveyor, which returned
+  COMPLETE with working-directory and requirements evidence.
+- Foreman delegated a real README usage-guide change to Craftsman in the same
+  isolated task worktree. Craftsman returned COMPLETE; local links and diff
+  checks passed, and only README changed within that assignment.
+- The same Surveyor returned BLOCKED when an explicitly required input file
+  was missing, without substituting sources, inventing requirements, modifying
+  files, or launching other agents.
+
+The native sequence used explicit caller-workspace isolation, returned pane
+IDs, full role-definition prompts, and substantive handoff retrieval. Main
+remained the visible Spaces root, focus was preserved, and actual selected
+runtime settings and role sandboxes were verified. Final independent review
+of the implementation and guide returned PASS/LGTM with no blocking findings.
 
 ## Milestone 2 — Stocktake and Bounded JEV Decisions
 
