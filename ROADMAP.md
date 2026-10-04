@@ -9,8 +9,9 @@ Milestones describe capabilities and evidence of completion, not dates or a
 prescribed implementation topology. The initial environment is Windows with
 Codex + Herdr installed; helper scripts are `.ps1` files.
 
-Milestone 1 is complete: implementation, native demonstrations, and final
-independent review passed. Milestones 2–5 remain planned.
+Milestones 1 and 2 are complete. Milestone 2 passed capability checks, real
+routing/delegation demonstrations, and independent Inspector review with
+same-session remediation and re-review. Milestones 3–5 remain separately planned.
 
 ## Milestone 1 — Foreman and Delegated Execution
 
@@ -65,6 +66,7 @@ Capabilities:
 - Preservation of manual model cost and intelligence ratings.
 - JEV-backed agent, skill, model, reasoning, and reviewer selection.
 - Direct Foreman selection when JEV fails or returns an unusable choice.
+- A dedicated read-only Inspector and independently routed review of this change.
 
 Completion evidence:
 
@@ -74,6 +76,55 @@ Completion evidence:
 - A Stocktake refresh preserves manual metadata; a failed refresh retains the
   previous catalog and reports failure.
 - Task worktree creation occurs after routing resolves.
+- Foreman honors a usable reviewer selection and receives a real Inspector verdict.
+
+Recorded demonstration evidence:
+
+- Before Stocktake and JEV were available, Foreman resolved routing through the
+  documented direct fallback: `workshop-craftsman` with `gpt-6-sol/high`.
+  Dispatch then used Herdr `worktree create --workspace w12Z --branch
+  workshop-milestone-2 --base main --path
+  E:/projects/workshop/.worktrees/workshop-milestone-2 --no-focus`. Native output
+  confirmed the branch/path, workspace `w131`, and Craftsman pane `w131:p1`;
+  main `w12Z` remained the visible root. This establishes worktree creation
+  after routing resolved without creating a second worktree for the proof.
+- Stocktake discovered Workshop agents and current-session global, plugin, and
+  Workshop skills from their sources, plus native-listed model/reasoning pairs.
+  Focused checks preserved manual numeric ratings and prior catalog bytes on a
+  failed refresh. Choice, Noul, and Score succeeded against the live TypeSafe
+  API with single and batched questions; controlled checks covered complete
+  candidate lists and direct fallback on unusable or failed JEV results.
+- For a real read-only PRD/ROADMAP requirements investigation, JEV selected
+  `workshop-surveyor` with `gpt-6-luna/low`. Foreman honored the result: dispatch
+  reopened the same task worktree, loaded the full Surveyor definition in
+  `w131:p2`, verified the selected runtime settings and read-only sandbox, and
+  received a COMPLETE evidence handoff.
+- A second real Foreman route for read-only implementation investigation sent
+  the full catalog to JEV and selected `workshop-surveyor` with
+  `gpt-6.1-sol/medium`. Foreman again honored the exact result; native startup
+  verified the model and effort, and Surveyor returned concrete correctness
+  observations. Assigning implementation correctness inspection to Surveyor
+  violated its investigation boundary; the user corrected this. The observations
+  were useful but do not count as Inspector review. This successful runtime
+  supersedes the earlier planning-time model
+  rejection; Workshop does not maintain an invented account blacklist.
+- Reviewer routing supplied all four catalog agents to JEV, which selected
+  `workshop-inspector` with `gpt-6.1-sol/high`. Foreman honored that selection;
+  native read-only Inspector in `w131:p3` loaded the full role definition and
+  reviewed the entire tracked and new-file change scope, including test sufficiency.
+- Inspector initially returned FINDINGS: PR creation was not explicitly bound
+  to origin's push repository, and committed branch changes were not checked
+  against the publication scope. Craftsman `w131:p1` remediated both findings
+  and added focused regressions. The same Inspector `w131:p3` independently
+  re-reviewed and returned PASS/LGTM with sufficient regression coverage.
+  Inspector made no fixes; roles operated sequentially in the same task worktree.
+
+This completes expanded Milestone 2 capability and review acceptance.
+Publication proceeds separately through deterministic `workshop-publish`;
+the Inspector verdict does not claim PR creation or authorize merging.
+Milestone 4's merge/cleanup capabilities remain future work, with explicit user
+authorization required for merge. Task context and catalog candidates went
+directly to JEV; no quantitative token saving is claimed.
 
 ## Milestone 3 — Independent Review and Remediation
 

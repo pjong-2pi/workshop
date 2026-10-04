@@ -37,7 +37,7 @@ The knowledgebase is local and excluded from Git. This tracked PRD makes the pro
 | JEV routing skills | Make bounded selections using available resources and task context | Do not execute the selected work |
 | Stocktake | Discover available routing resources and maintain the durable catalog | Agent definitions remain the source of agent metadata |
 | Delegation capability | Execute assignments through Herdr and arrange task isolation | Foreman retains workflow decisions |
-| Surveyor | Investigate the assigned question read-only and report evidence | Separate from Craftsman; does not modify files, implement, or delegate further |
+| Surveyor | Investigate the assigned question read-only and report evidence | Does not modify files, implement, review changes, or delegate further |
 | Craftsman | Implement the assigned scope, add appropriate tests, verify, and report | Does not expand scope or delegate further |
 | Inspector | Independently review read-only and assess test sufficiency | Does not fix findings |
 | Publication capability | Commit/push as required and create the PR | Does not modify implementation or fix engineering findings |
@@ -64,6 +64,11 @@ Foreman owns progression throughout the standard implementation route:
 10. After successful merge, delegate Clear Bench cleanup and consume its result.
 
 The standard route is not mandatory for every request. Read-only investigation may use scope → route → delegate → report, without implementation or publication. The user may alter or stop any workflow at any stage.
+
+Implementation tasks continue autonomously through independent review and
+delegated publication until a PR exists, unless a real blocker or user pause
+prevents progression. A worker COMPLETE handoff is not task completion.
+Merge execution still requires separate explicit user authorization.
 
 ## Functional Requirements
 
@@ -109,6 +114,7 @@ Reference: [JEV with coding agents](https://docs.typesafe.ai/introduction/coding
 
 - Craftsmen own implementation tests and relevant verification.
 - Inspectors review code and diffs, assess test sufficiency, and run appropriate non-mutating checks. Report PASS/LGTM, blocking findings, or non-blocking findings.
+- Change review and test-sufficiency review belong only to Inspector. Surveyor investigation must not substitute for review; report an unavailable Inspector as a missing prerequisite.
 - Blocking findings must be remediated and re-reviewed before publication.
 - PR creation, merging, and cleanup are always delegated; Foreman only orchestrates.
 - Only explicit user authorization permits merge execution.
