@@ -40,9 +40,12 @@ and the native Codex model catalog. It writes Git-ignored
 models stay unavailable. On refresh failure the previous catalog remains intact.
 
 Before a fresh role or skill selection, Foreman gives the scoped assignment and
-required role/capability names to `workshop-jev-route-job`. JEV receives all
+capability requirements to `workshop-jev-route-job`, without preselecting a
+concrete agent. JEV receives all
 available agents or skills and, for an agent, all selectable model/reasoning
-pairs. A usable selection goes unchanged to dispatch. Missing TypeSafe access
+pairs. Foreman checks the selected role's boundaries; a usable selection goes
+unchanged to dispatch. Consult JEV only for meaningful alternatives; invoke the
+sole `workshop-publish` capability directly after review. Missing TypeSafe access
 or an unusable answer triggers the PRD's direct-selection fallback. Set
 `TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
 Workshop. The routing skill gives the exact invocation and typed script inputs.
@@ -163,8 +166,8 @@ fast check and need only run for relevant changes.
 
 ## Planned progression
 
-Milestone 2 is complete, including independently routed Inspector PASS/LGTM
-after same-session remediation and re-review. Milestone 3 remains a separately
-tracked review-loop milestone. Publication is available through
-`workshop-publish`; authorized merge and `/workshop-clear-bench` remain later
-capabilities. The full end-to-end demonstration is Milestone 5.
+Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
+partially implemented with Inspector and same-session remediation/re-review.
+Milestone 4 is partially implemented with `workshop-publish`; merge and
+`workshop-clear-bench` do not yet exist. Merge still requires explicit user
+authorization. The full end-to-end demonstration is Milestone 5.

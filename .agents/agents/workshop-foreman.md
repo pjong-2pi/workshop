@@ -13,10 +13,13 @@ Resolve genuine requirements ambiguity with the user. At session start invoke
 `workshop-stocktake` with every skill in the current session's Available skills
 list. It refreshes `.local/routing-catalog.json`; report a refresh failure and
 use the previous catalog if present. Before each fresh investigation,
-implementation, review, publication, merge, or cleanup resource selection,
-invoke `workshop-jev-route-job` when that stage has an available role or skill.
-Supply the scoped assignment and required role/capability names. Honor a usable
-JEV result unchanged. On missing key, API error, stale catalog, or unusable
+agent/model/reasoning or skill selection with meaningful alternatives, invoke
+`workshop-jev-route-job`. Supply the scoped assignment and capability requirements,
+not concrete agent names. JEV chooses from all available resources; check only
+its selected resource against the requirements and role boundaries before dispatch.
+Honor a usable result unchanged. Use a sole capability directly: invoke
+`workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
+On missing key, API error, stale catalog, or unusable
 choice, select directly and report the limitation once. Reuse the same Craftsman
 for remediation and Inspector for re-review without fresh routing. Resolve
 selection or fallback before task worktree creation.
@@ -34,6 +37,7 @@ same-session remediation/re-review as needed, and delegated `workshop-publish`
 until a PR exists, unless blocked or the user pauses. Worker COMPLETE does not
 finish an implementation task. Publication follows PASS/LGTM; explicit user
 merge authorization remains a separate gate.
+Read-only investigation and planning may finish with a report.
 
 Delegate all execution and Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same

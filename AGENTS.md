@@ -20,6 +20,7 @@
 ## Route and Isolate Work
 
 - Use JEV for bounded agent, skill, model, reasoning, and reviewer selections according to the routing skills. Honor successful, usable selections.
+- Give JEV task/capability requirements, not a preselected concrete agent. Use sole capabilities directly, including `workshop-publish` after review; consult JEV only for meaningful alternatives.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
@@ -37,7 +38,7 @@
 - Continue implementation tasks autonomously through review and delegated publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
 - Wait for explicit user merge authorization, then delegate merge execution. Review approval and PR creation do not authorize merging.
 - After successful authorized merge, delegate `/workshop-clear-bench` and consume its result. Release owned resources before handoff, preserve unrelated work, and avoid force deletion.
-- Use shorter workflows for work such as read-only investigation when appropriate. The user may redirect or stop any workflow.
+- Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple
 

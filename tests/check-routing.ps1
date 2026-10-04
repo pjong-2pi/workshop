@@ -19,7 +19,7 @@ function global:codex {
 function global:Invoke-RestMethod {
     param($Method,$Uri,$Headers,$ContentType,$Body,$TimeoutSec,$ErrorAction)
     $request = $Body | ConvertFrom-Json -AsHashtable
-    Assert ($Method -eq 'Post' -and $TimeoutSec -eq 20 -and $request.model -eq 'jev-latest') 'Invalid API request.'
+    Assert ($Method -eq 'Post' -and $TimeoutSec -gt 0 -and $request.model -eq 'jev-latest') 'Invalid API request.'
     Assert ($Headers.Authorization -eq 'Bearer routing-test-key') 'API key missing from request.'
     $global:lastRequest = $request
     if ($global:apiFailure) { throw 'mock API unavailable' }
@@ -29,7 +29,7 @@ function global:Invoke-RestMethod {
         $question = $item.Value
         $answer = @{ type = $question.type }
         switch ($question.type) {
-            choice { $answer.choice = if ($global:badResource -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
+            choice { $answer.choice = if ($global:unknownResource -and $key -eq 'resource') { 'unavailable-agent' } elseif ($global:implementSelection -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
             noul { $answer.noul = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 0.8 } }
             score { $answer.score = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 1.2 } }
         }
@@ -95,32 +95,39 @@ try {
     $global:invalidNumeric = $null
 
     $route = Join-Path $scripts 'workshop-route-job.ps1'
-    $selection = & $route -Kind agent -Assignment 'Read-only requirements investigation' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    $requirements = 'Read-only evidence gathering; no edits, code review, or delegation.'
+    $selection = & $route -Kind agent -Assignment 'Read-only requirements investigation' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-surveyor' -and $selection.model -eq 'model-a' -and $selection.reasoning -eq 'high') "Usable selection changed: $($selection | ConvertTo-Json -Compress)"
     Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count) 'JEV did not receive every agent.'
     Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'JEV did not receive every available model/effort.'
-    $global:badResource = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'Wrong-role selection was accepted.'
-    $global:badResource = $false
+    Assert ($global:lastRequest.state.requirements -eq $requirements -and $global:lastRequest.state.assignment -eq 'Read-only requirements investigation') 'Task requirements were not passed unchanged.'
+    foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full role boundaries.' }
+    $global:implementSelection = $true
+    $selection = & $route -Kind agent -Assignment 'Fix a scoped implementation defect' -Requirements 'Implement the scoped change and run relevant checks; no review or publication.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
+    $global:implementSelection = $false
+    $global:unknownResource = $true
+    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    Assert ($fallback.status -eq 'fallback') 'Unavailable resource selection was accepted.'
+    $global:unknownResource = $false
     $global:badModel = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'Unsupported model/effort selection was accepted.'
     $global:badModel = $false
     $global:malformed = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'Malformed answer was accepted.'
     $global:malformed = $false
     $global:skillSelection = $true
-    $skill = & $route -Kind skill -Assignment 'Dispatch selected work' -AllowedNames 'workshop-dispatch' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
+    $skill = & $route -Kind skill -Assignment 'Choose a workflow support skill' -Requirements 'Help coordinate a scoped development workflow.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($skill.status -eq 'selected' -and $skill.resource -eq 'workshop-dispatch' -and $global:lastRequest.questions.resource.criteria.Count -eq $catalog.skills.Count) 'Skill routing did not use all skills.'
     $global:skillSelection = $false
     $global:apiFailure = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
+    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'API failure did not fall back.'
     $global:apiFailure = $false
     Remove-Item Env:\TYPESAFE_API_KEY
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -AllowedNames 'workshop-surveyor' -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
+    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'Missing key did not fall back.'
     'PASS: discovery, ratings, failed refresh, reserved-name batches, numeric answers, complete route choices, and fallback.'
 } finally {

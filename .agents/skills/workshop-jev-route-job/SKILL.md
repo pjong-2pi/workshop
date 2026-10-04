@@ -5,7 +5,7 @@ description: Route a fresh Workshop agent or skill selection through JEV using t
 
 # Route Job
 
-Use for each **fresh** investigation, implementation, review, publication, merge, or cleanup resource selection when that stage has an available agent or skill. Reuse the assigned Craftsman for remediation and Inspector for re-review. Stocktake runs independently at session start.
+Use for **fresh** agent/model/reasoning or skill selections with meaningful alternatives. Supply the assignment and capability requirements, not a preferred concrete identity. If there is no choice, use the available capability directly: the sole publication capability is `workshop-publish`, invoked after Inspector PASS/LGTM without JEV. Reuse the assigned Craftsman for remediation and Inspector for re-review. Stocktake runs independently at session start.
 
 Call the helper from any project directory using explicit Workshop paths:
 
@@ -13,11 +13,11 @@ Call the helper from any project directory using explicit Workshop paths:
 $workshopRoot = 'absolute path to Workshop checkout'
 $route = & "$workshopRoot/.agents/skills/workshop-jev-route-job/scripts/workshop-route-job.ps1" `
     -Kind agent -Assignment 'scoped assignment and complexity' `
-    -AllowedNames @('workshop-surveyor') `
+    -Requirements 'Gather cited evidence read-only; no edits, code review, or delegation.' `
     -CatalogPath "$workshopRoot/.local/routing-catalog.json" | ConvertFrom-Json
 ```
 
-For skill selection use `-Kind skill` and the allowed skill names. The helper gives JEV **all catalog agents or skills**, plus all selectable native model/reasoning pairs for agent routing, in one request. `-AllowedNames` states required role or capability; it does not filter JEV candidates. The role definitions are included as boundaries. A `selected` result is authoritative and goes unchanged to `workshop-dispatch` with the role definition, assignment, model and reasoning. Confirm actual runtime settings as dispatch requires. A `fallback` result means Foreman selects directly and reports the JEV limitation once; do not retry or seek a second opinion. Do not create a task worktree until selection or fallback resolves.
+For meaningful skill alternatives use `-Kind skill` with capability requirements. The helper gives JEV **all catalog agents or skills**, plus all selectable native model/reasoning pairs for agent routing, in one request. Full agent definitions supply role boundaries. It validates catalog membership, supported model/effort, and the API contract. Foreman checks only the selected resource against the requirements and its definition before dispatch; a conflicting role boundary makes it unusable. Do not compare candidates before the call or override a usable result. Pass a usable selection unchanged to `workshop-dispatch` and verify actual runtime settings. A `fallback` or unusable result means Foreman selects directly and reports the limitation once; no retry or second opinion. Resolve selection or fallback before task worktree creation.
 
 The catalog keeps absent models for manual ratings, but only `available` models enter routing. An unavailable later-stage role or skill cannot be made real by JEV: report that stage capability as pending. Review remains before publication; merging still requires explicit user authorization. The helper only selects and never dispatches.
 
