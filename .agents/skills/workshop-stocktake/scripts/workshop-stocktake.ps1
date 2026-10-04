@@ -20,7 +20,8 @@ try {
         $name = [regex]::Match($meta.Groups[1].Value, '(?m)^name:\s*(.+)$').Groups[1].Value.Trim()
         $description = [regex]::Match($meta.Groups[1].Value, '(?m)^description:\s*(.+)$').Groups[1].Value.Trim()
         if (-not $name -or -not $description) { throw "Incomplete agent metadata: $($file.Name)" }
-        $agents += @{ name = $name; description = $description; path = $file.FullName }
+        $delegatable = [regex]::Match($meta.Groups[1].Value, '(?m)^delegatable:[ \t]*([^\r\n]*)')
+        $agents += @{ name = $name; description = $description; path = $file.FullName; delegatable = $(if ($delegatable.Success) { [bool]::Parse($delegatable.Groups[1].Value.Trim()) } else { $true }) }
     }
     if (-not $agents.Count) { throw 'No Workshop agents found.' }
 
