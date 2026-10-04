@@ -4,12 +4,15 @@
 
 - [PRD.md](PRD.md) is the source of truth for product requirements. The Workshop knowledgebase captures the broader design history and reasoning; [ROADMAP.md](ROADMAP.md) defines capability milestones.
 - Resolve genuine requirements ambiguity with the user; do not invent requirements.
+- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, and `workshop-surveyor`; `workshop-inspector` is reserved for independent review. Use `workshop-dispatch` for delegation.
+- Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
 ## Foreman Only Orchestrates
 
 - Use the Foreman agent as the primary interface and sole workflow orchestrator.
 - Foreman scopes requests, invokes routing, delegates work, consumes handoffs, and coordinates progression and routine orchestration failures.
 - Foreman may inspect enough context to coordinate. Delegate substantive investigation, implementation, testing execution, and independent review.
+- Surveyors investigate read-only; Craftsmen implement and verify. Use the separate Surveyor role for investigation.
 - Delegate Git/worktree operations, PR creation, merging, and cleanup to agents or skills. Foreman must not perform those mechanics directly.
 - Workers perform only their assignment. Do not expand scope, redesign the workflow, redelegate, or reroute. Return blockers to Foreman.
 - Use each agent's handoff contract from its definition.
@@ -21,6 +24,7 @@
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
 - Use Herdr's capabilities to create one worktree per implementation task after routing resolves. Reuse it sequentially through implementation, review, remediation, and publication.
+- Keep the main session at the visible Herdr Spaces root, with delegation sessions underneath it. Dispatch preserves this ordering using native Herdr capabilities.
 - Only one role actively operates on a task worktree at a time. Keep target project repositories independent of Workshop.
 - Independent tasks may proceed within harness capabilities. Pause only the workflow requiring user clarification.
 

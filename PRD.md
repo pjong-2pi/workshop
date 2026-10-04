@@ -37,6 +37,7 @@ The knowledgebase is local and excluded from Git. This tracked PRD makes the pro
 | JEV routing skills | Make bounded selections using available resources and task context | Do not execute the selected work |
 | Stocktake | Discover available routing resources and maintain the durable catalog | Agent definitions remain the source of agent metadata |
 | Delegation capability | Execute assignments through Herdr and arrange task isolation | Foreman retains workflow decisions |
+| Surveyor | Investigate the assigned question read-only and report evidence | Separate from Craftsman; does not modify files, implement, or delegate further |
 | Craftsman | Implement the assigned scope, add appropriate tests, verify, and report | Does not expand scope or delegate further |
 | Inspector | Independently review read-only and assess test sufficiency | Does not fix findings |
 | Publication capability | Commit/push as required and create the PR | Does not modify implementation or fix engineering findings |
@@ -70,6 +71,7 @@ The standard route is not mandatory for every request. Read-only investigation m
 
 - Foreman is the primary user interface and sole workflow orchestrator.
 - Foreman may inspect enough context to coordinate; substantive investigation must be delegated.
+- Delegate read-only investigation to a separate Surveyor agent, not to a Craftsman.
 - Agents execute their assigned scope without redesigning the workflow, expanding scope, creating delegations, or rerouting work.
 - An agent unable to complete its assignment returns a blocked handoff to Foreman.
 - Each agent has a fixed handoff contract inside its definition. Contracts may differ by role; a universal schema is not required.
@@ -95,6 +97,7 @@ Reference: [JEV with coding agents](https://docs.typesafe.ai/introduction/coding
 
 ### Task Isolation and Concurrency
 
+- Keep the main session at the visible Herdr Spaces root, with delegation sessions underneath it.
 - One implementation task uses one isolated Git worktree, created using Herdr after routing resolves, including through the documented direct fallback.
 - Reuse that worktree sequentially for implementation, review, remediation, re-review, and publication. Roles do not require separate worktrees.
 - Only one role actively operates on a task worktree at a time.
