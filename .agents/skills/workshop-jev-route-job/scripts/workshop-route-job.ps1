@@ -15,12 +15,15 @@ try {
     $options = @{}
     foreach ($resource in $resources) {
         $description = $resource.description
-        if ($Kind -eq 'agent') { $description += "`n" + (Get-Content -LiteralPath $resource.path -Raw) }
+        if ($Kind -eq 'agent') {
+            $delegatable = if ($resource.ContainsKey('delegatable')) { $resource.delegatable } else { $true }
+            $description += "`nDelegatable: $delegatable`n" + (Get-Content -LiteralPath $resource.path -Raw)
+        }
         $options[$resource.name] = $description
     }
     $questions = @{ resource = @{ instructions = "Select the available $Kind that satisfies state.requirements for state.assignment. Respect every supplied role boundary; select resources yourself without assuming a preferred identity."; criteria = $options } }
     if ($Kind -eq 'agent') {
-        $questions.resource.instructions += ' workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker. Select another agent whose role and capabilities satisfy the assignment.'
+        $questions.resource.instructions += ' Agents marked Delegatable: False are never eligible as delegated workers. Select a delegatable agent whose role and capabilities satisfy the assignment.'
     }
     $pairs = @{}
     if ($Kind -eq 'agent') {
@@ -41,8 +44,8 @@ try {
     if (-not $?) { throw ($raw -join [Environment]::NewLine) }
     $answers = $raw | ConvertFrom-Json -AsHashtable
     $selected = $answers.resource.choice
-    if ($Kind -eq 'agent' -and $selected -eq 'workshop-foreman') {
-        throw 'Unusable agent choice: workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker.'
+    if ($Kind -eq 'agent' -and @($resources | Where-Object { $_.name -eq $selected -and $_.delegatable -eq $false }).Count) {
+        throw "Unusable agent choice: $selected is not delegatable."
     }
     $result = @{ status = 'selected'; kind = $Kind; resource = $selected }
     if ($Kind -eq 'agent') {

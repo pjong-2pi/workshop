@@ -30,7 +30,7 @@ function global:Invoke-RestMethod {
         $question = $item.Value
         $answer = @{ type = $question.type }
         switch ($question.type) {
-            choice { $answer.choice = if ($global:unknownResource -and $key -eq 'resource') { 'unavailable-agent' } elseif ($global:foremanSelection -and $key -eq 'resource') { 'workshop-foreman' } elseif ($global:implementSelection -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
+            choice { $answer.choice = if ($global:unknownResource -and $key -eq 'resource') { 'unavailable-agent' } elseif ($global:nonDelegatableSelection -and $key -eq 'resource') { 'workshop-test-bench' } elseif ($global:implementSelection -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
             noul { $answer.noul = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 0.8 } }
             score { $answer.score = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 1.2 } }
         }
@@ -41,20 +41,37 @@ function global:Invoke-RestMethod {
 }
 
 try {
+    $fixtureRoot = Join-Path $temporary 'workshop'
+    $agentDirectory = Join-Path $fixtureRoot '.agents/agents'
+    $skillDirectory = Join-Path $fixtureRoot '.agents/skills/workshop-dispatch'
+    New-Item -ItemType Directory -Path $agentDirectory, $skillDirectory | Out-Null
+    Copy-Item -Path (Join-Path $root '.agents/agents/*.md') -Destination $agentDirectory
+    Copy-Item -LiteralPath (Join-Path $root '.agents/skills/workshop-dispatch/SKILL.md') -Destination $skillDirectory
+    $syntheticPath = Join-Path $agentDirectory 'workshop-test-bench.md'
+    Set-Content -LiteralPath $syntheticPath -Value "---`nname: workshop-test-bench`ndescription: Synthetic non-delegatable role.`ndelegatable: false`n---`nThis role cannot accept delegated work."
     $catalogPath = Join-Path $temporary 'catalog.json'
     $skills = @(@{name='global-test';description='Global skill';path=(Join-Path $root 'AGENTS.md')}) | ConvertTo-Json -Compress
-    & $stocktake -WorkshopRoot $root -CatalogPath $catalogPath -SessionSkillsJson $skills | Out-Null
+    & $stocktake -WorkshopRoot $fixtureRoot -CatalogPath $catalogPath -SessionSkillsJson $skills | Out-Null
     Assert ($LASTEXITCODE -eq 0) 'Initial discovery failed.'
     $catalog = Get-Content $catalogPath -Raw | ConvertFrom-Json -AsHashtable
+    $foreman = @($catalog.agents | Where-Object name -EQ 'workshop-foreman')[0]
+    $surveyor = @($catalog.agents | Where-Object name -EQ 'workshop-surveyor')[0]
+    Assert ($foreman.delegatable -is [bool] -and $foreman.delegatable -eq $false) 'Foreman source boundary was not discovered as a boolean.'
+    Assert ($surveyor.delegatable -is [bool] -and $surveyor.delegatable -eq $true) 'Unspecified delegatability did not default to true.'
+    $foreman.delegatable = $true
+    $surveyor.delegatable = $false
     Assert ($catalog.agents.Count -ge 3 -and @($catalog.skills | Where-Object name -EQ 'global-test').Count -eq 1) 'Agents or session skills missing.'
     Assert (@($catalog.models | Where-Object available).Count -eq 2 -and @($catalog.models | Where-Object name -EQ 'internal').Count -eq 0) 'Model visibility not respected.'
     $catalog.models[0].cost = 3.5
     $catalog.models[0].intelligence = 8
     $catalog.models += @{name='temporarily-absent';available=$false;cost=7;intelligence=9}
     $catalog | ConvertTo-Json -Depth 12 | Set-Content $catalogPath
-    & $stocktake -WorkshopRoot $root -CatalogPath $catalogPath -SessionSkillsJson $skills | Out-Null
+    & $stocktake -WorkshopRoot $fixtureRoot -CatalogPath $catalogPath -SessionSkillsJson $skills | Out-Null
     Assert ($LASTEXITCODE -eq 0) 'Refresh failed.'
     $catalog = Get-Content $catalogPath -Raw | ConvertFrom-Json -AsHashtable
+    $foreman = @($catalog.agents | Where-Object name -EQ 'workshop-foreman')[0]
+    $surveyor = @($catalog.agents | Where-Object name -EQ 'workshop-surveyor')[0]
+    Assert ($foreman.delegatable -is [bool] -and $foreman.delegatable -eq $false -and $surveyor.delegatable -eq $true) 'Refresh retained stale catalog delegatability instead of source metadata/default.'
     $rated = @($catalog.models | Where-Object name -EQ 'model-a')[0]
     $new = @($catalog.models | Where-Object name -EQ 'model-b')[0]
     $absent = @($catalog.models | Where-Object name -EQ 'temporarily-absent')[0]
@@ -62,10 +79,10 @@ try {
     Assert (-not $absent.available -and $absent.cost -eq 7 -and $absent.intelligence -eq 9) 'Absent model metadata lost.'
     $before = [IO.File]::ReadAllBytes($catalogPath)
     $global:failDiscovery = $true
-    & $stocktake -WorkshopRoot $root -CatalogPath $catalogPath -SessionSkillsJson $skills 2>$null | Out-Null
+    & $stocktake -WorkshopRoot $fixtureRoot -CatalogPath $catalogPath -SessionSkillsJson $skills 2>$null | Out-Null
     Assert ($LASTEXITCODE -ne 0 -and [Convert]::ToBase64String($before) -eq [Convert]::ToBase64String([IO.File]::ReadAllBytes($catalogPath))) 'Failed discovery changed the catalog.'
     $freshPath = Join-Path $temporary 'missing-catalog.json'
-    & $stocktake -WorkshopRoot $root -CatalogPath $freshPath -SessionSkillsJson $skills 2>$null | Out-Null
+    & $stocktake -WorkshopRoot $fixtureRoot -CatalogPath $freshPath -SessionSkillsJson $skills 2>$null | Out-Null
     Assert ($LASTEXITCODE -ne 0 -and -not (Test-Path -LiteralPath $freshPath)) 'First-run failure created a catalog.'
     $global:failDiscovery = $false
 
@@ -103,18 +120,19 @@ try {
     Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'JEV did not receive every available model/effort.'
     Assert ($global:lastRequest.state.requirements -eq $requirements -and $global:lastRequest.state.assignment -eq 'Read-only requirements investigation') 'Task requirements were not passed unchanged.'
     foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full role boundaries.' }
-    $global:foremanSelection = $true
+    $global:nonDelegatableSelection = $true
     $callsBefore = $global:apiCalls
     $fallback = & $route -Kind agent -Assignment 'Clean up task resources' -Requirements 'Release owned resources and preserve unrelated work; no orchestration.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback' -and $fallback.reason -eq 'Unusable agent choice: workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker.') 'Foreman selection did not return the caller-boundary fallback reason.'
-    Assert ($global:apiCalls -eq $callsBefore + 1) 'Foreman selection retried or rerouted.'
-    Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count -and $global:lastRequest.questions.resource.criteria.ContainsKey('workshop-foreman')) 'Foreman was filtered from the full agent payload.'
-    Assert ($global:lastRequest.questions.resource.instructions -match 'workshop-foreman is the caller and sole workflow orchestrator, never eligible as a delegated worker') 'Agent prompt omitted the caller boundary.'
-    Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'Foreman routing changed the complete model/effort list.'
+    Assert ($fallback.status -eq 'fallback' -and $fallback.reason -eq 'Unusable agent choice: workshop-test-bench is not delegatable.') 'Non-delegatable selection did not return the original fallback reason.'
+    Assert ($global:apiCalls -eq $callsBefore + 1) 'Non-delegatable selection retried or rerouted.'
+    Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count -and $global:lastRequest.questions.resource.criteria.ContainsKey('workshop-test-bench') -and $global:lastRequest.questions.resource.criteria.ContainsKey('workshop-foreman')) 'Non-delegatable agents were filtered from the full payload.'
+    foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full definitions for every agent.' }
+    Assert ($global:lastRequest.questions.resource.criteria['workshop-test-bench'] -match 'Delegatable: False' -and $global:lastRequest.questions.resource.instructions -match 'Agents marked Delegatable: False are never eligible as delegated workers') 'Agent prompt omitted the metadata boundary.'
+    Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'Routing changed the complete model/effort list.'
     foreach ($model in @($catalog.models | Where-Object available)) {
-        foreach ($effort in $model.reasoning) { Assert ($global:lastRequest.questions.model_reasoning.criteria.ContainsKey("$($model.name)/$effort")) 'Foreman routing omitted an available model/effort.' }
+        foreach ($effort in $model.reasoning) { Assert ($global:lastRequest.questions.model_reasoning.criteria.ContainsKey("$($model.name)/$effort")) 'Routing omitted an available model/effort.' }
     }
-    $global:foremanSelection = $false
+    $global:nonDelegatableSelection = $false
     $global:implementSelection = $true
     $selection = & $route -Kind agent -Assignment 'Fix a scoped implementation defect' -Requirements 'Implement the scoped change and run relevant checks; no review or publication.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
@@ -143,7 +161,7 @@ try {
     Remove-Item Env:\TYPESAFE_API_KEY
     $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'Missing key did not fall back.'
-    'PASS: discovery, ratings, failed refresh, reserved-name batches, numeric answers, complete route choices, caller boundary, and fallback.'
+    'PASS: discovery, source-authoritative delegatability, ratings, failed refresh, reserved-name batches, numeric answers, complete route choices, generic delegation boundary, and fallback.'
 } finally {
     $env:TYPESAFE_API_KEY = $savedKey
     Remove-Item Function:\codex,Function:\Invoke-RestMethod -ErrorAction SilentlyContinue
