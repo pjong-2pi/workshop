@@ -1,97 +1,81 @@
 ---
 name: workshop-dispatch
-description: Dispatch a Foreman-selected Workshop role through native Herdr, arranging or reusing the assigned task worktree and returning its handoff.
+description: Execute a Foreman-selected assignment through native Herdr and return the selected role's handoff.
 ---
 
 # Dispatch
 
-Execute Foreman's selected assignment; do not select roles, route, or decide
-workflow progression. Read `herdr --skill` unless already loaded and use the
-installed CLI as the syntax authority. Require `HERDR_ENV=1`; otherwise return
-BLOCKED. Definitions live in `.agents/agents/` relative to Workshop,
-independently of the target project.
+Foreman supplies the role definition, scoped assignment, target project,
+selected model/reasoning, and new-task branch/base/path or existing execution
+reference. Execute that selection; return blockers to Foreman without routing,
+changing scope, or deciding the next workflow step. Read `herdr --skill` unless
+already loaded; use its native commands from a Herdr-managed session.
 
-Foreman supplies the selected definition, scoped assignment, acceptance
-outcomes, target path, selected model/reasoning options, and either a new
-implementation branch/base/path or existing task worktree/session. Return
-missing inputs instead of inventing requirements. Runtime names use the
-definition name plus a short unique suffix when needed, within Herdr's
-32-character limit.
+## Execute
 
-## Native Sequence
+1. Use the explicit main caller supplied by Foreman, or discover it with
+   `herdr pane current --current`. Confirm its target repository using
+   `herdr worktree list --workspace <main-id>` and check the native workspace
+   view for the correct visible main root. An older main for the same repo can
+   become the root: return that conflict before opening task resources.
+   Missing caller repository membership alone is not a conflict; native
+   create/open can establish it.
+2. Create implementation isolation with `herdr worktree create --workspace
+   <main-id> --branch <branch> --base <ref> --path <task-path> --no-focus`, or
+   reopen the SAME existing task with `herdr worktree open --workspace <main-id>
+   --path <task-path> --no-focus`. Never substitute `--cwd` for the main ID.
+   Use returned workspace/pane IDs and checkout/branch evidence, not inferred
+   IDs. Confirm the task belongs underneath that main and uses the assigned
+   repository/worktree. Explicit caller targeting, the native returned source
+   and task provenance, and the workspace view establish this; use one relevant
+   snapshot if association remains unclear, then return BLOCKED if unresolved.
+   For read-only work without a task worktree, use a sibling shell pane at the
+   assigned project path instead. Preserve user focus with `--no-focus`.
+3. Start the selected role in an available shell pane, or reuse its assigned
+   session in the same task worktree. Never replace or prompt an unrelated
+   active agent. Craftsman uses `workspace-write`; Surveyor uses `read-only`.
+   Pass the selected model/reasoning and confirm the actual startup settings
+   once in visible output: launch arguments previously differed from the
+   runtime selection. Return a mismatch or model error to Foreman; do not
+   switch models or retry the assignment.
+4. Submit the complete definition from Workshop's `.agents/agents/` plus the
+   scoped assignment. These are explicit instructions, not registered native
+   agent types. Wait and read the role's substantive handoff, then return it
+   with the execution reference: agent name, workspace/pane, task path/branch.
 
-1. Discover the caller using `herdr pane current --current`, unless Foreman
-   supplied an explicit caller. Use its returned workspace ID, not cached IDs
-   or the UI-focused workspace. Confirm the intended repository with
-   `herdr worktree list --workspace <caller-id>`.
-2. After selection resolves, create new implementation isolation with
-   `herdr worktree create --workspace <caller-id> --branch <branch> --base <ref>
-   --path <absolute-task-path> --no-focus`. For an existing task, use
-   `herdr worktree open --workspace <caller-id> --path <task-path> --no-focus`.
-   Read task workspace/root pane IDs from the JSON response. Never substitute
-   `--cwd` for the caller: it can select an older workspace for the same repo.
-   For investigation without an assigned task worktree, use the assigned
-   target path and a native sibling shell pane; do not create a worktree.
-3. Verify actual layout using `herdr api snapshot`: caller and task share the
-   intended repository key, caller is the first primary workspace for that key
-   (the visible Spaces root), and task is its linked child. For sibling
-   investigation, verify its pane belongs to the caller workspace. Preserve
-   main focus. If placement cannot be established, return BLOCKED with retained
-   IDs; do not reorder, move, close, or rewrite Herdr state. Duplicate primary
-   workspaces can affect the visible root.
-4. Start the selected role in the returned available shell pane. Craftsman
-   uses `workspace-write`; Surveyor uses `read-only`. Verify actual runtime
-   model/reasoning from terminal output before prompting and after completion.
-   Echoed arguments alone are insufficient: a mismatch, unverifiable explicit
-   selection, or model error is BLOCKED. Return it to Foreman without switching,
-   retrying, or rerouting.
-5. Load the complete definition and assignment as one prompt. These Markdown
-   definitions are explicit session instructions, not automatically registered
-   Codex agent types. Consume the role's own handoff contract. Reuse the same
-   worktree and appropriate role session for subsequent assignments.
+## Native Example
 
-This parameterized PowerShell example reopens an existing task. Foreman supplies
-`$dispatchTaskPath`, `$dispatchName`, `$dispatchModel`, `$dispatchReasoning`,
-`$dispatchSandbox`, `$dispatchDefinitionPath`, and `$dispatchAssignment`.
-Check every native command's exit code and stop on error. Apply the checks above
-at the indicated boundaries before proceeding.
+Foreman supplies the variables below; check native command failures before
+continuing. This reopens a task and starts a new selected role. For an assigned
+existing role session, reuse it and continue at prompt submission.
 
 ```powershell
-$dispatchCaller = (herdr pane current --current | ConvertFrom-Json).result.pane
-$dispatchWorkspace = $dispatchCaller.workspace_id
-herdr worktree list --workspace $dispatchWorkspace
-$dispatchOpened = herdr worktree open --workspace $dispatchWorkspace --path $dispatchTaskPath --no-focus | ConvertFrom-Json
-$dispatchPane = $dispatchOpened.result.root_pane.pane_id
-herdr api snapshot
-# Verify caller root, task child, and preserved focus before starting.
-herdr agent start $dispatchName --kind codex --pane $dispatchPane -- -C $dispatchTaskPath --sandbox $dispatchSandbox -m $dispatchModel -c "model_reasoning_effort=$dispatchReasoning"
-herdr agent read $dispatchName --source visible --lines 40
-# Verify actual runtime model/reasoning before submitting.
-$dispatchRole = Get-Content -Raw -LiteralPath $dispatchDefinitionPath
-$dispatchPrompt = $dispatchRole + "`n`nForeman assignment:`n" + $dispatchAssignment
-herdr agent prompt $dispatchName $dispatchPrompt --wait --timeout 45000
-herdr agent get $dispatchName
-herdr agent read $dispatchName --source recent-unwrapped --lines 160
-herdr api snapshot
+$main = (herdr pane current --current | ConvertFrom-Json).result.pane.workspace_id
+herdr worktree list --workspace $main
+herdr workspace list
+# Confirm the target repo/main root; do not open beneath an older main.
+$task = herdr worktree open --workspace $main --path $taskPath --no-focus | ConvertFrom-Json
+$pane = $task.result.root_pane.pane_id
+# Confirm returned task path/branch and association with the selected main.
+herdr agent start $agentName --kind codex --pane $pane -- -C $taskPath --sandbox $sandbox -m $model -c "model_reasoning_effort=$reasoning"
+herdr agent read $agentName --source visible
+# Confirm actual selected model/reasoning and role sandbox before submitting.
+$role = Get-Content -Raw -LiteralPath $definitionPath
+$prompt = $role + "`n`nForeman assignment:`n" + $assignment
+herdr agent prompt $agentName $prompt --wait --timeout 45000
+herdr agent read $agentName --source recent-unwrapped
 ```
 
-## Consume and Return
+## Handoff or Blocker
 
-Native `done`/`idle` proves readiness, not success; model errors can settle in
-those states. Report COMPLETE only with a substantive complete handoff. Return
-BLOCKED for startup failure, missing handoff, or model/tool error, with the
-observed error and any partial work.
+Use the selected role's contract. `idle`/`done` is not a successful assignment:
+an unsupported model previously settled there without a handoff. Return the
+actual handoff or observed error, with any partial work and execution reference.
 
-If waiting expires or `get` still shows working, inspect state/output and
-report whether work remains active; never blindly resubmit. Foreman may assign
-continued monitoring with `herdr agent wait <name> --timeout 45000`. Use visible
-text while working and recent-unwrapped output once settled. If completed
-Surveyor output cannot be recovered read-only, return BLOCKED; never request
-a file write from that role.
-
-Return the role handoff, worktree path/branch when applicable, runtime name,
-workspace/pane IDs, native session ID if exposed by `agent get`, and actual
-runtime/layout evidence. Foreman owns the next assignment and resolves blockers.
-Only one role actively operates on a task worktree at a time. Release owned
-transient resources before handoff and retain sessions/worktrees for sequential
-work; do not publish, merge, or clean them up.
+If waiting expires, use `herdr agent get <name>` and available output to report
+whether work is still running. Keep that reference for Foreman to continue the
+same session with `herdr agent wait <name> --timeout 45000`; never resubmit merely
+because a wait ended. Read visible output while working, completed output once
+settled. If a handoff cannot be read, return that limitation; Surveyor must not
+write recovery files. Keep the task/session for sequential roles and release
+owned transient resources before returning.
