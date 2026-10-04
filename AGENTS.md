@@ -4,7 +4,7 @@
 
 - [PRD.md](PRD.md) is the source of truth for product requirements. The Workshop knowledgebase captures the broader design history and reasoning; [ROADMAP.md](ROADMAP.md) defines capability milestones.
 - Resolve genuine requirements ambiguity with the user; do not invent requirements.
-- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, and `workshop-surveyor`; `workshop-inspector` is reserved for independent review. Use `workshop-dispatch` for delegation.
+- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, and `workshop-inspector`. Use `workshop-dispatch` for delegation.
 - Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
 ## Foreman Only Orchestrates
@@ -20,6 +20,7 @@
 ## Route and Isolate Work
 
 - Use JEV for bounded agent, skill, model, reasoning, and reviewer selections according to the routing skills. Honor successful, usable selections.
+- Give JEV task/capability requirements, not a preselected concrete agent. Use sole capabilities directly, including `workshop-publish` after review; consult JEV only for meaningful alternatives.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
@@ -31,11 +32,13 @@
 ## Verify, Review, and Finish
 
 - Craftsmen implement and run relevant checks; Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings.
+- Assign change/test-sufficiency review only to Inspector; Surveyor investigates and never substitutes for Inspector.
 - Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
 - Delegate publication after review. Publication must not modify implementation.
+- Continue implementation tasks autonomously through review and delegated publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
 - Wait for explicit user merge authorization, then delegate merge execution. Review approval and PR creation do not authorize merging.
 - After successful authorized merge, delegate `/workshop-clear-bench` and consume its result. Release owned resources before handoff, preserve unrelated work, and avoid force deletion.
-- Use shorter workflows for work such as read-only investigation when appropriate. The user may redirect or stop any workflow.
+- Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple
 

@@ -2,8 +2,8 @@
 
 Workshop coordinates development work on Windows with Codex + Herdr already
 installed. [PRD.md](PRD.md) defines requirements; [ROADMAP.md](ROADMAP.md)
-defines milestones. This guide covers the current Milestone 1 delegation path,
-not completion of the full first-version workflow.
+defines milestones. This guide covers delegated execution, routing, independent
+review, and publication. Merge and cleanup capabilities remain on the roadmap.
 
 ## Start as Foreman
 
@@ -14,6 +14,7 @@ the visible Spaces root. In the current Codex session, ask:
 Read AGENTS.md, PRD.md, ROADMAP.md, and
 .agents/agents/workshop-foreman.md. Act as workshop-foreman.
 Scope my request and delegate execution through workshop-dispatch.
+Run workshop-stocktake at session start and workshop-jev-route-job for fresh selections.
 ```
 
 Role definitions are Markdown instructions loaded explicitly into each native
@@ -25,12 +26,32 @@ session; they are not automatically registered Codex agent types.
 | [workshop-foreman](.agents/agents/workshop-foreman.md) | Scope, select, dispatch, and consume handoffs |
 | [workshop-craftsman](.agents/agents/workshop-craftsman.md) | Implement a scoped change and verify it |
 | [workshop-surveyor](.agents/agents/workshop-surveyor.md) | Investigate a scoped question read-only |
+| [workshop-inspector](.agents/agents/workshop-inspector.md) | Independently review changes and test sufficiency read-only |
 | [workshop-dispatch](.agents/skills/workshop-dispatch/SKILL.md) | Native Herdr isolation, role launch, and handoff retrieval |
+| [workshop-stocktake](.agents/skills/workshop-stocktake/SKILL.md) | Discover session resources and refresh the local routing catalog |
+| [workshop-jev-route-job](.agents/skills/workshop-jev-route-job/SKILL.md) | Make and validate bounded JEV selections |
+| [workshop-publish](.agents/skills/workshop-publish/SKILL.md) | Publish an Inspector-approved scoped change as a PR |
 
-While JEV routing and Stocktake are unavailable, Foreman reports that limitation
-and selects directly using the PRD fallback. Use available model/reasoning
-options; no particular model is required. Stocktake and bounded JEV routing
-are planned for Milestone 2.
+At session start, Stocktake takes the current Codex Available skills list,
+including global and plugin skills, and reads Workshop agent/skill definitions
+and the native Codex model catalog. It writes Git-ignored
+`.local/routing-catalog.json`. Manually entered numeric `cost` and
+`intelligence` ratings survive refreshes; new models remain unrated and absent
+models stay unavailable. On refresh failure the previous catalog remains intact.
+
+Before a fresh role or skill selection, Foreman gives the scoped assignment and
+capability requirements to `workshop-jev-route-job`, without preselecting a
+concrete agent. JEV receives all
+available agents or skills and, for an agent, all selectable model/reasoning
+pairs. Foreman checks the selected role's boundaries; a usable selection goes
+unchanged to dispatch. Consult JEV only for meaningful alternatives; invoke the
+sole `workshop-publish` capability directly after review. Missing TypeSafe access
+or an unusable answer triggers the PRD's direct-selection fallback. Set
+`TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
+Workshop. The routing skill gives the exact invocation and typed script inputs.
+Use the native picker/runtime check in dispatch to confirm the selected model
+is accepted by the current account; the native catalog alone cannot prove
+account entitlement for every listed model.
 
 ## Delegate a scoped change
 
@@ -86,6 +107,18 @@ Both return COMPLETE or BLOCKED and release owned transient resources while
 preserving task sessions and worktrees. Workers do not reroute or redelegate;
 Foreman consumes their handoffs and owns every next transition.
 
+Surveyor never reviews code changes or substitutes for Inspector. Inspector
+returns `VERDICT`, `FINDINGS`, `CHECKS`, `BLOCKERS`, and `NOTES`, including an
+explicit PASS/LGTM or located blocking/nonblocking findings and test-sufficiency
+assessment. Missing Inspector availability blocks review.
+
+For implementation tasks, Foreman continues after Craftsman COMPLETE through
+Inspector review, remediation in the same Craftsman and re-review in the same
+Inspector session, then delegated publication until a PR exists, unless blocked
+or the user pauses. After PASS/LGTM, `workshop-publish` stages only Foreman's
+explicit reviewed file list, commits, pushes, and creates the PR. Worker COMPLETE
+does not finish the task; PR creation does not authorize merging.
+
 Craftsman runs checks relevant to the assigned change and reports commands,
 actual results, and limitations. For a documentation change, check local links
 and `git diff --check`, then inspect the scoped diff. Surveyor cites files and
@@ -97,10 +130,12 @@ resubmitting the assignment.
 
 ## Checks and behavioral smoke tests
 
-Run the dependency-free fast check with PowerShell 7; it launches no agents:
+Run the dependency-free fast checks with PowerShell 7; they launch no agents:
 
 ```powershell
 pwsh -NoProfile -File .\tests\check-workshop.ps1
+pwsh -NoProfile -File .\tests\check-routing.ps1
+pwsh -NoProfile -File .\tests\check-publication.ps1
 ```
 
 From another directory, pass the script's absolute path. It derives the project
@@ -131,8 +166,8 @@ fast check and need only run for relevant changes.
 
 ## Planned progression
 
-Independent Inspector review and same-session remediation/re-review are planned
-for Milestone 3. Delegated publication, PR creation, explicitly user-authorized
-merge, and `/workshop-clear-bench` cleanup are planned for Milestone 4. The full
-end-to-end demonstration is Milestone 5. Implementation completion is neither
-independent review nor permission to publish or merge.
+Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
+partially implemented with Inspector and same-session remediation/re-review.
+Milestone 4 is partially implemented with `workshop-publish`; merge and
+`workshop-clear-bench` do not yet exist. Merge still requires explicit user
+authorization. The full end-to-end demonstration is Milestone 5.

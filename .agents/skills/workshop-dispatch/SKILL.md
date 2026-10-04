@@ -33,7 +33,7 @@ already loaded; use its native commands from a Herdr-managed session.
    assigned project path instead. Preserve user focus with `--no-focus`.
 3. Start the selected role in an available shell pane, or reuse its assigned
    session in the same task worktree. Never replace or prompt an unrelated
-   active agent. Craftsman uses `workspace-write`; Surveyor uses `read-only`.
+   active agent. Craftsman uses `workspace-write`; Surveyor and Inspector use `read-only`.
    Pass the selected model/reasoning and confirm the actual startup settings
    once in visible output: launch arguments previously differed from the
    runtime selection. Return a mismatch or model error to Foreman; do not
