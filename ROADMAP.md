@@ -9,9 +9,8 @@ Milestones describe capabilities and evidence of completion, not dates or a
 prescribed implementation topology. The initial environment is Windows with
 Codex + Herdr installed; helper scripts are `.ps1` files.
 
-Milestones 1, 2, and 3 are complete. Milestone 4 is partially implemented:
-publication and the lifecycle runner exist, while its real authorized merge
-and cleanup demonstration remains pending.
+Milestones 1, 2, and 3 are complete. Milestone 4 is partially
+implemented with publication; merge and cleanup are not implemented.
 Milestone 5 remains planned.
 
 ## Milestone 1 — Foreman and Delegated Execution
@@ -179,7 +178,7 @@ Recorded demonstration evidence:
 
 ## Milestone 4 — Delegated Publication, Merge, and Cleanup
 
-Status: PARTIALLY IMPLEMENTED - `workshop-publish` and the `workshop-fit` lifecycle runner exist; real authorized merge/cleanup demonstration remains pending.
+Status: PARTIALLY IMPLEMENTED — `workshop-publish` exists; merge and cleanup do not.
 Milestone 2 work is in PR #22, undergoing correction before merge. PR creation
 does not authorize merging; merge still requires explicit user authorization.
 
@@ -188,25 +187,22 @@ and cleaned task without Foreman executing the mechanics.
 
 Capabilities:
 
-- Foreman invokes deterministic `workshop-publish` to commit/push and create or update the identified PR.
-- An explicit user authorization gate before delegated squash merge execution. The user's own `lgtm` in a PR discussion authorizes the unambiguous current PR; Inspector PASS/LGTM and publication do not. Clarify ambiguous PR identity. Authorization applies to reviewed PR content; changed content returns to review and authorization.
-- `workshop-fit` confirms the squash merge, then performs Clear Bench cleanup.
-- Cleanup fast-forwards the main checkout only when clean; dirty work remains intact and skipped or blocked updates are reported. Preserve unrelated resources and avoid force deletion. Release owned resources before handoff and verify cleanup.
+- Delegated commit/push and PR creation.
+- An explicit user authorization gate before delegated merge execution.
+- Delegated `/workshop-clear-bench` after successful merge.
+- Resource release before handoff and essential cleanup verification.
 
 Completion evidence:
 
-- Delegated publication creates or updates the explicitly identified PR without changing implementation.
-- No merge occurs without explicit user authorization; the authorized operation is a squash merge of the unambiguous, reviewed PR content.
-- An authorized merge is executed by the deterministic `workshop-fit` runner.
+- Delegated publication creates the PR without changing implementation.
+- No merge occurs without explicit user authorization.
+- An authorized merge is executed by a delegated agent or skill.
 - Cleanup reports removal of task resources while preserving unrelated work,
   without force deletion.
 - Foreman consumes the results and only orchestrates these operations.
 
-Foreman launches `workshop-fit` only after explicit user authorization, in a
-separate Herdr pane outside task resources. The runner emits a final handoff for
-later collection; it does not make skill invocation asynchronous. For an
-identified existing PR, `workshop-publish` verifies repository, open state,
-head branch, and base before staging, then updates that PR after pushing.
+Choose agent or deterministic skill execution based on the simplest useful
+capability; do not require an LLM Fitter in advance.
 
 ## Milestone 5 — Workshop Develops Itself
 

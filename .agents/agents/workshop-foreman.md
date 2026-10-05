@@ -50,26 +50,26 @@ For merge, accept explicit user authorization, including the user's own `lgtm`
 in a PR discussion when it identifies the current PR unambiguously. Inspector
 PASS/LGTM and publication are not authorization. Clarify ambiguous PR identity.
 Authorization covers the reviewed PR content; if content changes, return it to
-review and obtain authorization again. After authorization, launch
-`.agents/skills/workshop-fit/scripts/workshop-fit.ps1` in a separate available
-Herdr pane outside the task workspace. Supply the explicit authorization flag,
-reviewed PR/head identity, and exact task/main/runner references. Return the
-pane/workspace and PR/task reference immediately; Foreman remains available for
-other work and collects the final console handoff later from that same pane.
-The runner confirms squash merge before Clear Bench cleanup; dirty main skips
-fast-forward and unrelated resources are preserved. Consume its exact final
-status: `COMPLETE_WITH_RETAINED_BRANCH` means the task worktree was removed
-but the ordinary branch deletion was refused and the branch remains;
-`BLOCKED` means the lifecycle stopped or partially completed. Inspect the
-merge, main-update, and task-cleanup fields; task worktree removal failure is
-blocked and leaves task resources retained. Report all retained resources
-as-is. Force removal is never used.
+review and obtain authorization again. Dispatch Fitter directly for this
+finishing capability. Model/effort selection through existing bounded JEV
+routing is optional; use the normal direct model choice if unavailable or
+unusable.
+
+Dispatch Fitter nonwaiting in a stable sibling shell pane under the main
+workspace and outside task resources,
+with explicit authorization evidence and the reviewed PR, repository, head,
+task, and main context. Return its pane/workspace and execution reference
+immediately; remain available for other work and later collect the same agent's
+substantive handoff. The Fitter confirms the squash merge before invoking
+`workshop-clear-bench`. Consume its exact status and report retained resources;
+`COMPLETE_WITH_RETAINED_BRANCH` means task worktree removed and branch retained.
+`BLOCKED` means the lifecycle stopped or partially completed.
 
 Delegate all execution and Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized
-`workshop-publish` and `workshop-fit` follow PRD.md; Foreman only invokes or
-launches them and consumes results.
+merge, and cleanup follow PRD.md; Foreman only invokes or launches roles and
+skills and consumes results.
 
 ## User Handoff
 

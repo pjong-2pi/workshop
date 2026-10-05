@@ -4,7 +4,7 @@
 
 - [PRD.md](PRD.md) is the source of truth for product requirements. The Workshop knowledgebase captures the broader design history and reasoning; [ROADMAP.md](ROADMAP.md) defines capability milestones.
 - Resolve genuine requirements ambiguity with the user; do not invent requirements.
-- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, and `workshop-inspector`. Use `workshop-dispatch` for delegation.
+- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, `workshop-inspector`, and `workshop-fitter`. Use `workshop-dispatch` for delegation.
 - Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
 ## Foreman Only Orchestrates
@@ -20,7 +20,7 @@
 ## Route and Isolate Work
 
 - Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly. Honor successful, usable selections.
-- Give JEV task/capability requirements, not a preselected concrete agent. Invoke deterministic `workshop-publish` directly after Inspector PASS/LGTM. After explicit user merge authorization, launch `workshop-fit` in a separate Herdr pane outside task resources.
+- Give JEV task/capability requirements, not a preselected concrete agent. Invoke deterministic `workshop-publish` directly after Inspector PASS/LGTM. After explicit user merge authorization, dispatch Fitter directly; optional JEV model/effort selection may inform the choice but is not a role-selection prerequisite.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
@@ -34,10 +34,10 @@
 - Craftsmen implement and run relevant checks; Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings.
 - Assign change/test-sufficiency review only to Inspector; Surveyor investigates and never substitutes for Inspector.
 - Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
-- After review, Foreman invokes deterministic `workshop-publish` directly. After a PR exists and the user explicitly authorizes merge, run `workshop-fit` nonblocking in a separate Herdr shell pane outside the task workspace; retain its execution reference and collect its final handoff later. Clear Bench cleanup is the cleanup phase of this capability.
+- After review, Foreman invokes deterministic `workshop-publish` directly; existing-PR mode validates repository, open state, head branch, and base before staging. After a PR exists and the user explicitly authorizes merge, dispatch Fitter nonblocking in a stable sibling pane outside task resources, retain the execution reference, and collect the same agent's handoff later while other work continues. Use optional JEV model/effort selection only when useful; otherwise use the normal direct model choice.
 - Continue implementation tasks autonomously through review and direct deterministic publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
-- Wait for explicit user merge authorization before launching the lifecycle runner. The user's own `lgtm` in an unambiguous PR discussion authorizes the reviewed current PR; Inspector PASS/LGTM and publication do not. Changed content returns to review and authorization.
-- After authorization, run `workshop-fit` nonblocking in a separate Herdr shell pane outside task resources. Retain the runner pane and PR/task reference, then collect its final handoff later. It confirms squash merge before Clear Bench cleanup, fast-forwards main only when clean, preserves dirty/unrelated work, and never force-removes resources.
+- Wait for explicit user merge authorization before dispatching the Fitter. The user's own `lgtm` in an unambiguous PR discussion authorizes the reviewed current PR; Inspector PASS/LGTM and publication do not. Changed content returns to review and authorization.
+- The Fitter confirms the reviewed PR identity, checks merge readiness, immediately squash-merges with the reviewed head guard, confirms actual MERGED state, then invokes `workshop-clear-bench`. The skill fast-forwards main only when clean, preserves dirty/unrelated work, and never force-removes resources. Consume the Fitter's exact handoff, including retained-branch or blocked-cleanup outcomes.
 - Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple

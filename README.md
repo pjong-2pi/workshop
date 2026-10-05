@@ -3,7 +3,7 @@
 Workshop coordinates development work on Windows with Codex + Herdr already
 installed. [PRD.md](PRD.md) defines requirements; [ROADMAP.md](ROADMAP.md)
 defines milestones. This guide covers delegated execution, routing, independent
-review, publication, and authorized PR lifecycle handling.
+review, and publication. Merge and cleanup capabilities remain on the roadmap.
 
 ## Start as Foreman
 
@@ -48,8 +48,7 @@ concrete agent. JEV receives all
 available agents or skills and, for an agent, all selectable model/reasoning
 pairs. Foreman checks the selected role's boundaries; a usable selection goes
 unchanged to dispatch. Consult JEV only for meaningful alternatives; invoke the
-Invoke deterministic `workshop-publish` directly after review. It needs no JEV
-selection. Missing TypeSafe access
+sole `workshop-publish` capability directly after review. Missing TypeSafe access
 or an unusable answer triggers the PRD's direct-selection fallback. Set
 `TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
 Workshop. The routing skill gives the exact invocation and typed script inputs.
@@ -118,11 +117,10 @@ assessment. Missing Inspector availability blocks review.
 
 For implementation tasks, Foreman continues after Craftsman COMPLETE through
 Inspector review, remediation in the same Craftsman and re-review in the same
-Inspector session, then direct `workshop-publish` until a PR exists, unless
-blocked or the user pauses. PR creation does not authorize merging. After
-explicit user authorization, Foreman runs `workshop-fit` nonblocking in a
-separate Herdr pane outside task resources and later collects its final handoff.
-Inspector approval alone never authorizes merging.
+Inspector session, then delegated publication until a PR exists, unless blocked
+or the user pauses. After PASS/LGTM, `workshop-publish` stages only Foreman's
+explicit reviewed file list, commits, pushes, and creates the PR. Worker COMPLETE
+does not finish the task; PR creation does not authorize merging.
 
 Craftsman runs checks relevant to the assigned change and reports commands,
 actual results, and limitations. For a documentation change, check local links
@@ -174,5 +172,5 @@ fast check and need only run for relevant changes.
 Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
 complete: independent Inspector review and same-session remediation/re-review.
 Milestone 4 is partially implemented with `workshop-publish`; merge and
-`workshop-fit` exists, but real authorized merge and cleanup demonstration
-remains pending. The full end-to-end demonstration is Milestone 5.
+`workshop-clear-bench` do not yet exist. Merge still requires explicit user
+authorization. The full end-to-end demonstration is Milestone 5.
