@@ -22,7 +22,7 @@ The knowledgebase is local and excluded from Git. This tracked PRD makes the pro
 ## Goals
 
 - Complete ordinary development work without the user coordinating routine handoffs.
-- Keep Foreman responsible solely for orchestration.
+- Keep Foreman responsible for orchestration, with only the narrow direct incident-recording exception below.
 - Delegate execution, including investigation, implementation, review, PR creation, merging, and cleanup.
 - Reduce Codex tokens spent on bounded decisions through JEV.
 - Preserve independent review, task isolation, and explicit user merge authorization.
@@ -33,7 +33,7 @@ The knowledgebase is local and excluded from Git. This tracked PRD makes the pro
 | Role or capability | Responsibility | Boundary |
 | --- | --- | --- |
 | User | Define intent, clarify requirements, authorize merges, redirect or stop work | Merge authorization belongs to the user |
-| Foreman agent | Scope, invoke routing, delegate, consume handoffs, coordinate progression and routine orchestration failures | Does not implement, substantively investigate, review, publish, merge, or clean up directly |
+| Foreman agent | Scope, invoke routing, delegate, consume handoffs, coordinate progression and routine orchestration failures; directly maintain the private incident report | Only the incident-recording exception below permits direct operational writes; does not implement, substantively investigate, review, publish, merge, or clean up directly |
 | JEV routing skills | Make bounded selections using available resources and task context | Do not execute the selected work |
 | Stocktake | Discover available routing resources and maintain the durable catalog | Agent definitions remain the source of agent metadata |
 | Delegation capability | Execute assignments through Herdr and arrange task isolation | Foreman retains workflow decisions |
@@ -80,6 +80,15 @@ Merge execution requires separate explicit user authorization.
 - Each agent has a fixed handoff contract inside its definition. Contracts may differ by role; a universal schema is not required.
 - Foreman handles routine coordination autonomously and asks the user when requirements or authorization genuinely require user input.
 
+### Incident Recording and User-Triggered Triage
+
+- Maintain one canonical private `local/incident-report.md` under the explicit known main Workshop checkout/session root. Do not infer this root from cwd or use a target project/task worktree. Create the parent and file when absent; preserve existing records. Git-ignore exactly `/local/incident-report.md`, not the whole directory. Keep the report out of PR content and omit secrets and unnecessary payloads.
+- Foreman may directly append/update this report as a narrow quick operational-write exception. Capture observed Workshop orchestration failures or friction across projects immediately when known, and briefly notify the user. Logging requires neither root-cause investigation nor an implementation/review/publication cycle per entry; the cause may remain unknown.
+- Capture significant unexpected failures requiring recovery or user intervention. Ordinary expected review findings or clarifications are not automatically incidents. Workers remain within their assignment and sandbox; Foreman's assignments ask them to report observed events through existing handoff fields, without central writes or changed handoff schemas.
+- Use stable date/sequence headings (for example, `2026-10-06 / 1`) and plain Markdown covering context/project, what failed, impact/evidence, recovery, and follow-up status. Keep recovery separate from whether follow-up is addressed. Add dated later updates without rewriting the event account. Record repeat observed occurrences as new entries; group them at triage without a deduplication framework.
+- Triage only on a user request: read open incidents, group related causes, assess recurrence and impact, and record each disposition as deferred, planned, or addressed with a reason and links to related incidents or implementation tasks/PRs. Delegate substantive investigation if needed; no scheduled or automatic triage.
+- During user-triggered triage, the user permits Foreman to start clear, scoped, low-risk fixes only when independent parallel execution is possible without disrupting active tasks. Return complex, ambiguous, conflicting, or nonparallel fixes to the user for a decision. Actual fixes use normal routing, isolated Craftsman implementation, independent Inspector review, publication, and explicit user merge authorization. A proposed fix or recovered incident alone authorizes neither implementation nor merge.
+
 ### JEV Routing
 
 - Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly.
@@ -111,13 +120,15 @@ Reference: [JEV with coding agents](https://docs.typesafe.ai/introduction/coding
 
 ### Review, Publication, Merge, and Cleanup
 
+- Standing user publication authorization, granted 2026-10-06 and persistent until revoked: implementation requests authorize commit, push, and PR creation/update of Inspector-approved scoped implementation to the assigned project's established origin push repository. Workshop's explicitly approved destination is `https://github.com/7wwtwinkletoes/workshop`. Exclude private incident logs, secrets, and unrelated scope. No extra routine publication confirmation is required; explicit task-local-only instructions override this consent. Clarify changed/unclear destinations or actual new scope.
+- Preserve native approval controls. Cite the standing consent recorded in AGENTS.md and the destination in publication approval justifications; respect rejection and report the actual limitation without bypass or any guarantee that controls will approve. Publication consent does not authorize merge.
 - Craftsmen own implementation tests and relevant verification; implementation assignments do not commit, push, or create/update PRs.
 - Inspectors review code and diffs read-only, assess test sufficiency, and run appropriate non-mutating checks. Report PASS/LGTM, blocking findings, or non-blocking findings; never edit or publish.
 - Change review and test-sufficiency review belong only to Inspector. Surveyor investigation must not substitute for review; report an unavailable Inspector as a missing prerequisite.
 - Blocking findings return to the same Craftsman and same Inspector for remediation and re-review.
-- Inspector PASS/LGTM is gate one: Foreman returns the same task to the same Craftsman with the approved scope and verdict to invoke `workshop-publish`. Content changes after approval need relevant re-review before publication.
+- Inspector PASS/LGTM is gate one: Foreman returns the same task to the same Craftsman with the approved scope, verdict, and standing publication consent to invoke `workshop-publish`, then returns the PR link to the user. Content changes after approval need relevant re-review before publication.
 - Explicit user authorization after PR creation is gate two for Fitter to merge. The user's own `lgtm` in an unambiguous current PR discussion counts; Inspector PASS/LGTM and publication do not. Content changes after merge authorization require renewed review and user authorization.
-- Foreman only orchestrates and responds to the user; it does not publish, merge, or clean task resources.
+- Foreman orchestrates and responds to the user, with only the direct incident-recording exception above; it does not publish, merge, or clean task resources.
 - Fitter confirms the reviewed PR merge before invoking Clear Bench. Clear Bench preserves dirty main and unrelated resources and avoids force deletion.
 - Agents release resources they own before handing off.
 

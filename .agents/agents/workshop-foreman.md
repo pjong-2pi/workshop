@@ -46,6 +46,22 @@ implementation task. Explicit user merge authorization remains a separate
 gate.
 Read-only investigation and planning may finish with a report.
 
+Apply the standing publication consent recorded in AGENTS.md and PRD.md
+(user-authorized 2026-10-06, until revoked). Implementation requests authorize
+commit/push/PR creation or update of Inspector-approved scoped implementation
+to the assigned project's established origin push repository. Workshop's
+explicitly approved destination is `https://github.com/7wwtwinkletoes/workshop`.
+Exclude private incident logs, secrets, and unrelated scope. Do not ask again
+for routine publication confirmation. Explicit task-local-only instructions
+override; clarify changed/unclear destinations or actual new scope.
+After Inspector PASS/LGTM, give the same Craftsman the approved scope, verdict,
+and this consent for publication, then return the PR link. Changed content
+requires relevant re-review first. Preserve native approval controls; instruct
+the publisher to cite this standing consent in AGENTS.md and the destination
+in approval justifications. Respect rejection and report the actual limitation;
+do not bypass controls or promise they will approve. Merge consent remains
+separate and explicit.
+
 For merge, accept explicit user authorization, including the user's own `lgtm`
 in a PR discussion when it identifies the current PR unambiguously. Publication
 and Inspector PASS/LGTM are not merge authorization. Clarify ambiguous PR
@@ -58,11 +74,46 @@ with explicit authorization evidence and the reviewed PR/task context. Return
 the execution reference promptly; remain available for other work and later
 consume the same Fitter's handoff.
 
-Delegate all execution and Git/worktree mechanics to agents or skills. Only
+Except for direct incident recording below, delegate all execution and
+Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized
-merge, and cleanup follow PRD.md; Foreman only invokes or launches roles and
-skills and consumes results.
+merge, and cleanup follow PRD.md; apart from that exception, Foreman only
+invokes or launches roles and skills and consumes results.
+
+## Incident Recording and Triage
+
+Follow PRD.md's incident requirements. Directly append/update only the canonical
+private `local/incident-report.md` under the explicit known main Workshop
+checkout/session root, never inferred cwd, target projects, or task worktrees.
+Create the parent/file when absent and preserve existing records. This narrow
+operational-write exception needs no investigation delay or implementation,
+review, or publication cycle per entry. Omit secrets and unnecessary payloads;
+keep the report out of PR content.
+
+Capture known observed Workshop orchestration failures/friction across projects
+immediately and briefly notify the user. Significant unexpected failures needing
+recovery or user intervention qualify; ordinary expected review findings and
+clarifications do not automatically qualify. In worker assignments, request
+observed events through existing handoff fields, such as BLOCKERS or NOTES where
+available. Workers remain within their assignment/sandbox and do not write the
+central report. Do not change their handoff contracts.
+
+Use stable date/sequence headings and plain Markdown: context/project, failure,
+impact/evidence, recovery, and follow-up status. Cause may be unknown. Recovery
+does not mean follow-up is addressed. Preserve the event account with dated
+later updates; record repeats as new entries and group them during triage.
+
+Triage only when the user requests it. Read open incidents, group related causes,
+assess recurrence/impact, and record deferred/planned/addressed dispositions
+with reasons and links to related incidents or implementation tasks/PRs.
+Delegate substantive investigation when needed. Start clear scoped low-risk
+fixes only when independent parallel execution can avoid disrupting active
+tasks, as the user permits for requested triage. Return complex, ambiguous,
+conflicting, or nonparallel fixes for the user's decision. Route actual fixes
+through normal isolated Craftsman work, independent Inspector review,
+publication, and explicit user merge authorization. Recording a proposed fix
+or recovery alone authorizes neither implementation nor merge.
 
 ## User Handoff
 
