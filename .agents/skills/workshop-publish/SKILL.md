@@ -20,14 +20,9 @@ Run the helper using its absolute Workshop path from any project directory:
     -Title $prTitle -Body $prBody -Base $targetBase
 ```
 
-For a Foreman-assigned existing PR, this helper has no update mode. Verify the
-PR is open, belongs to the origin push repository, has the expected head branch
-and base, and its head repository matches origin. Apply the same exact-root,
-branch, repository, staged-work, and committed-scope checks above; stage only
-the approved files, commit, and push to the existing head branch. That push
-updates the PR. Use native
-`gh pr edit <number>` only when its title or body needs changing; do not call
-`gh pr create` for that existing PR.
+For a Foreman-assigned existing PR, Craftsman publishes Inspector-approved
+changes to the existing task branch. Pushing that branch updates the PR; do not
+create a duplicate PR.
 
 `-Files` contains explicit repository-relative files, including reviewed new
 files and deletions. The helper verifies the root and branch, rejects paths
