@@ -20,7 +20,7 @@
 ## Route and Isolate Work
 
 - Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly. Honor successful, usable selections.
-- Give JEV task/capability requirements, not a preselected concrete agent. Invoke deterministic `workshop-publish` directly after Inspector PASS/LGTM. After explicit user merge authorization, dispatch Fitter directly; optional JEV model/effort selection may inform the choice but is not a role-selection prerequisite.
+- Give JEV task/capability requirements, not a preselected concrete agent. Use JEV only for meaningful alternatives; optional model selection does not gate direct Fitter dispatch or Craftsman's publication assignment.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
@@ -31,13 +31,14 @@
 
 ## Verify, Review, and Finish
 
-- Craftsmen implement and run relevant checks; Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings.
+- Craftsmen implement and run relevant checks, but do not commit, push, or create/update PRs during implementation. After Inspector PASS/LGTM, Foreman returns the same task to the same Craftsman to publish only the approved scope through `workshop-publish`.
+- Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings or publish.
 - Assign change/test-sufficiency review only to Inspector; Surveyor investigates and never substitutes for Inspector.
 - Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
-- After review, Foreman invokes deterministic `workshop-publish` directly; existing-PR mode validates repository, open state, head branch, and base before staging. After a PR exists and the user explicitly authorizes merge, dispatch Fitter nonblocking in a stable sibling pane outside task resources, retain the execution reference, and collect the same agent's handoff later while other work continues. Use optional JEV model/effort selection only when useful; otherwise use the normal direct model choice.
-- Continue implementation tasks autonomously through review and direct deterministic publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
-- Wait for explicit user merge authorization before dispatching the Fitter. The user's own `lgtm` in an unambiguous PR discussion authorizes the reviewed current PR; Inspector PASS/LGTM and publication do not. Changed content returns to review and authorization.
-- The Fitter confirms the reviewed PR identity, checks merge readiness, immediately squash-merges with the reviewed head guard, confirms actual MERGED state, then invokes `workshop-clear-bench`. The skill fast-forwards main only when clean, preserves dirty/unrelated work, and never force-removes resources. Consume the Fitter's exact handoff, including retained-branch or blocked-cleanup outcomes.
+- Inspector PASS/LGTM authorizes only publication of the reviewed scope. Content changed after approval returns for relevant review before publication.
+- Wait for explicit user merge authorization after a PR exists; review approval and publication do not authorize merging. Changed content after merge authorization requires renewed review and user authorization.
+- After authorization, dispatch Fitter for the existing merge-and-Clear-Bench lifecycle. Use a nonwaiting dispatch when work should continue, retain the execution reference, and collect the same Fitter handoff later. Preserve unrelated work and avoid force deletion.
+- Continue implementation tasks through review, same-Craftsman publication, and PR creation/update unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
 - Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple
