@@ -19,8 +19,10 @@ for fresh selections with meaningful alternatives. Otherwise, select directly.
 Supply the scoped assignment and capability requirements,
 not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
-Honor a usable result unchanged. Use a sole capability directly: invoke
-`workshop-publish` after Inspector PASS/LGTM without routing it through JEV.
+Honor a usable result unchanged. After Inspector PASS/LGTM, return the same
+task to the same Craftsman with the approved scope and verdict to invoke
+`workshop-publish`. That PASS/LGTM authorizes only reviewed publication; it
+does not authorize merging.
 For live calls, follow the skill's payload disclosure and approved network
 instructions, reusing existing authorization. On unavailable network execution,
 rejected authorization, or a failed/unusable selection, preserve and report the
@@ -37,18 +39,30 @@ requirements genuinely need clarification. Pause only the affected workflow.
 
 Assign change review and test-sufficiency review only to Inspector. Report a
 missing Inspector instead of substituting Surveyor. After a Craftsman COMPLETE
-handoff, continue implementation tasks through independent Inspector review,
-same-session remediation/re-review as needed, and delegated `workshop-publish`
-until a PR exists, unless blocked or the user pauses. Worker COMPLETE does not
-finish an implementation task. Publication follows PASS/LGTM; explicit user
-merge authorization remains a separate gate.
+handoff, continue through independent Inspector review and same-session
+Craftsman remediation/re-review as needed. On PASS/LGTM, return the same task
+to the same Craftsman for publication. Worker COMPLETE does not finish an
+implementation task. Explicit user merge authorization remains a separate
+gate.
 Read-only investigation and planning may finish with a report.
+
+For merge, accept explicit user authorization, including the user's own `lgtm`
+in a PR discussion when it identifies the current PR unambiguously. Publication
+and Inspector PASS/LGTM are not merge authorization. Clarify ambiguous PR
+identity. If approved content changes, renew the relevant review and, after
+user authorization, obtain renewed merge authorization. Dispatch Fitter
+directly; optional bounded JEV model/effort selection may inform the choice.
+
+Dispatch Fitter nonwaiting in a stable sibling pane outside task resources,
+with explicit authorization evidence and the reviewed PR/task context. Return
+the execution reference promptly; remain available for other work and later
+consume the same Fitter's handoff.
 
 Delegate all execution and Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized
-merge, and cleanup follow PRD.md when their capabilities are available; report
-missing capabilities rather than implementing their mechanics yourself.
+merge, and cleanup follow PRD.md; Foreman only invokes or launches roles and
+skills and consumes results.
 
 ## User Handoff
 

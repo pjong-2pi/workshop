@@ -33,15 +33,21 @@ already loaded; use its native commands from a Herdr-managed session.
    assigned project path instead. Preserve user focus with `--no-focus`.
 3. Start the selected role in an available shell pane, or reuse its assigned
    session in the same task worktree. Never replace or prompt an unrelated
-   active agent. Craftsman uses `workspace-write`; Surveyor and Inspector use `read-only`.
+   active agent. Craftsman and Fitter use `workspace-write`; Surveyor and Inspector use `read-only`.
+   Generic command execution may use a caller-selected location; place its pane
+   outside any task resources the execution will remove. Only one role actively
+   operates on a task worktree at a time.
    Pass the selected model/reasoning and confirm the actual startup settings
    once in visible output: launch arguments previously differed from the
    runtime selection. Return a mismatch or model error to Foreman; do not
    switch models or retry the assignment.
 4. Submit the complete definition from Workshop's `.agents/agents/` plus the
    scoped assignment. These are explicit instructions, not registered native
-   agent types. Wait and read the role's substantive handoff, then return it
-   with the execution reference: agent name, workspace/pane, task path/branch.
+   agent types. Waiting for a handoff or returning an execution reference is
+   caller-selected. For a nonwaiting agent prompt, omit `--wait`; return the
+   same agent, pane, and workspace references for later handoff collection.
+   Use a stable sibling pane outside task resources that may be removed. This
+   is the caller's selected dispatch behavior, not a role-specific rule.
 
 ## Native Example
 

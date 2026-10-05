@@ -4,7 +4,7 @@
 
 - [PRD.md](PRD.md) is the source of truth for product requirements. The Workshop knowledgebase captures the broader design history and reasoning; [ROADMAP.md](ROADMAP.md) defines capability milestones.
 - Resolve genuine requirements ambiguity with the user; do not invent requirements.
-- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, and `workshop-inspector`. Use `workshop-dispatch` for delegation.
+- Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, `workshop-inspector`, and `workshop-fitter`. Use `workshop-dispatch` for delegation.
 - Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
 ## Foreman Only Orchestrates
@@ -20,7 +20,7 @@
 ## Route and Isolate Work
 
 - Use `workshop-jev-route-job` when available for fresh selections with meaningful alternatives. Otherwise, select directly. Honor successful, usable selections.
-- Give JEV task/capability requirements, not a preselected concrete agent. Use sole capabilities directly, including `workshop-publish` after review; consult JEV only for meaningful alternatives.
+- Give JEV task/capability requirements, not a preselected concrete agent. Use JEV only for meaningful alternatives; optional model selection does not gate direct Fitter dispatch or Craftsman's publication assignment.
 - Provide all available agents and models. If JEV fails or returns an unusable choice, Foreman selects directly without elaborate retry logic.
 - Arrange session-start `/workshop-stocktake`. Preserve the previous catalog and report failures if refresh fails.
 - Target Windows with Codex + Herdr installed. Write helper scripts as `.ps1`.
@@ -31,13 +31,14 @@
 
 ## Verify, Review, and Finish
 
-- Craftsmen implement and run relevant checks; Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings.
+- Craftsmen implement and run relevant checks, but do not commit, push, or create/update PRs during implementation. After Inspector PASS/LGTM, Foreman returns the same task to the same Craftsman to publish only the approved scope through `workshop-publish`.
+- Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings or publish.
 - Assign change/test-sufficiency review only to Inspector; Surveyor investigates and never substitutes for Inspector.
 - Foreman sends blocking findings to the same Craftsman session and arranges re-review in the same Inspector session until PASS/LGTM.
-- Delegate publication after review. Publication must not modify implementation.
-- Continue implementation tasks autonomously through review and delegated publication until a PR exists, unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
-- Wait for explicit user merge authorization, then delegate merge execution. Review approval and PR creation do not authorize merging.
-- After successful authorized merge, delegate `/workshop-clear-bench` and consume its result. Release owned resources before handoff, preserve unrelated work, and avoid force deletion.
+- Inspector PASS/LGTM authorizes only publication of the reviewed scope. Content changed after approval returns for relevant review before publication.
+- Wait for explicit user merge authorization after a PR exists; review approval and publication do not authorize merging. Changed content after merge authorization requires renewed review and user authorization.
+- After authorization, dispatch Fitter for the existing merge-and-Clear-Bench lifecycle. Use a nonwaiting dispatch when work should continue, retain the execution reference, and collect the same Fitter handoff later. Preserve unrelated work and avoid force deletion.
+- Continue implementation tasks through review, same-Craftsman publication, and PR creation/update unless blocked or the user pauses. A worker COMPLETE handoff does not finish the task.
 - Read-only investigation and planning may finish with a report. The user may redirect or stop any workflow.
 
 ## Keep It Simple

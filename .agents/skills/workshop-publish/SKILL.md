@@ -5,11 +5,11 @@ description: Commit and push an independently approved implementation task and c
 
 # Publish
 
-Foreman invokes this deterministic skill after consuming the independent
-Inspector's PASS/LGTM for the current change. Confirm that verdict covers the
-files being published and that blocking findings are resolved. Craftsman and
-Inspector do not execute publication. This skill never edits implementation,
-merges, or cleans task resources.
+Craftsman invokes this deterministic skill only after Foreman returns the same
+task with the independent Inspector's PASS/LGTM and approved scope. Confirm
+that verdict covers the files being published and blocking findings are
+resolved. This skill never edits implementation, merges, or cleans task
+resources.
 
 Run the helper using its absolute Workshop path from any project directory:
 
@@ -19,6 +19,10 @@ Run the helper using its absolute Workshop path from any project directory:
     -ReviewVerdict PASS -CommitMessage $commitMessage `
     -Title $prTitle -Body $prBody -Base $targetBase
 ```
+
+For a Foreman-assigned existing PR, Craftsman publishes Inspector-approved
+changes to the existing task branch. Pushing that branch updates the PR; do not
+create a duplicate PR.
 
 `-Files` contains explicit repository-relative files, including reviewed new
 files and deletions. The helper verifies the root and branch, rejects paths
