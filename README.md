@@ -3,7 +3,7 @@
 Workshop coordinates development work on Windows with Codex + Herdr already
 installed. [PRD.md](PRD.md) defines requirements; [ROADMAP.md](ROADMAP.md)
 defines milestones. This guide covers delegated execution, routing, independent
-review, and publication. Merge and cleanup capabilities remain on the roadmap.
+review, publication, and authorized PR lifecycle handling.
 
 ## Start as Foreman
 
@@ -29,7 +29,6 @@ session; they are not automatically registered Codex agent types.
 | [workshop-craftsman](.agents/agents/workshop-craftsman.md) | Implement a scoped change and verify it |
 | [workshop-surveyor](.agents/agents/workshop-surveyor.md) | Investigate a scoped question read-only |
 | [workshop-inspector](.agents/agents/workshop-inspector.md) | Independently review changes and test sufficiency read-only |
-| [workshop-fitter](.agents/agents/workshop-fitter.md) | Publish reviewed scope through `workshop-publish` |
 | [workshop-dispatch](.agents/skills/workshop-dispatch/SKILL.md) | Native Herdr isolation, role launch, and handoff retrieval |
 | [workshop-stocktake](.agents/skills/workshop-stocktake/SKILL.md) | Discover session resources and refresh the local routing catalog |
 | [workshop-jev-route-job](.agents/skills/workshop-jev-route-job/SKILL.md) | Make and validate bounded JEV selections |
@@ -49,8 +48,8 @@ concrete agent. JEV receives all
 available agents or skills and, for an agent, all selectable model/reasoning
 pairs. Foreman checks the selected role's boundaries; a usable selection goes
 unchanged to dispatch. Consult JEV only for meaningful alternatives; invoke the
-Fitter is routed for mechanical publication after review and invokes the sole
-`workshop-publish` capability directly. Missing TypeSafe access
+Invoke deterministic `workshop-publish` directly after review. It needs no JEV
+selection. Missing TypeSafe access
 or an unusable answer triggers the PRD's direct-selection fallback. Set
 `TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
 Workshop. The routing skill gives the exact invocation and typed script inputs.
@@ -119,11 +118,11 @@ assessment. Missing Inspector availability blocks review.
 
 For implementation tasks, Foreman continues after Craftsman COMPLETE through
 Inspector review, remediation in the same Craftsman and re-review in the same
-Inspector session, then Fitter publication until a PR exists, unless blocked
-or the user pauses. After PASS/LGTM, Fitter invokes `workshop-publish` with
-Foreman's explicit reviewed file list, commits, pushes, and creates or updates
-the identified PR. Worker COMPLETE does not finish the task; PR creation does
-not authorize merging.
+Inspector session, then direct `workshop-publish` until a PR exists, unless
+blocked or the user pauses. PR creation does not authorize merging. After
+explicit user authorization, Foreman runs `workshop-fit` nonblocking in a
+separate Herdr pane outside task resources and later collects its final handoff.
+Inspector approval alone never authorizes merging.
 
 Craftsman runs checks relevant to the assigned change and reports commands,
 actual results, and limitations. For a documentation change, check local links
@@ -175,5 +174,5 @@ fast check and need only run for relevant changes.
 Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
 complete: independent Inspector review and same-session remediation/re-review.
 Milestone 4 is partially implemented with `workshop-publish`; merge and
-`workshop-clear-bench` do not yet exist. Merge still requires explicit user
-authorization. The full end-to-end demonstration is Milestone 5.
+`workshop-fit` exists, but real authorized merge and cleanup demonstration
+remains pending. The full end-to-end demonstration is Milestone 5.

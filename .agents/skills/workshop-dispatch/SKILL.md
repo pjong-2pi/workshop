@@ -33,25 +33,21 @@ already loaded; use its native commands from a Herdr-managed session.
    assigned project path instead. Preserve user focus with `--no-focus`.
 3. Start the selected role in an available shell pane, or reuse its assigned
    session in the same task worktree. Never replace or prompt an unrelated
-   active agent. Craftsman and Fitter use `workspace-write`; Surveyor and Inspector use `read-only`.
-   Only one role may actively operate on the task worktree at a time.
+   active agent. Craftsman uses `workspace-write`; Surveyor and Inspector use `read-only`.
+   Generic command execution may use a caller-selected execution location; do
+   not require a runner pane to be inside a worktree it will remove. Only one
+   role actively operates on a task worktree at a time.
    Pass the selected model/reasoning and confirm the actual startup settings
    once in visible output: launch arguments previously differed from the
    runtime selection. Return a mismatch or model error to Foreman; do not
    switch models or retry the assignment.
 4. Submit the complete definition from Workshop's `.agents/agents/` plus the
    scoped assignment. These are explicit instructions, not registered native
-   agent types. For ordinary roles, wait and read the substantive handoff.
-   For Fitter publication, submit without `--wait`, return its execution
-   reference, then collect the substantive handoff later from the same session.
-   This leaves Foreman available for independent work and user messages; it
-   does not make skill invocation itself asynchronous. Include agent name,
-   workspace/pane, task path, and branch in the reference.
-
-After returning a Fitter execution reference, Foreman may continue independent
-work or respond to the user. When collecting publication, address the same
-agent session and read its substantive handoff; do not resubmit the prompt just
-because publication has not completed yet.
+   agent types. Waiting for a handoff or returning an execution reference is
+   caller-selected. For a native command, use pane run in a separate available
+   Herdr shell pane when the caller needs to remain available; retain the pane
+   and workspace reference and collect its output later. This does not make
+   command invocation asynchronous by itself.
 
 ## Native Example
 
@@ -72,13 +68,8 @@ herdr agent read $agentName --source visible
 # Confirm actual selected model/reasoning and role sandbox before submitting.
 $role = Get-Content -Raw -LiteralPath $definitionPath
 $prompt = $role + "`n`nForeman assignment:`n" + $assignment
-if ($agentName -eq 'workshop-fitter') {
-    herdr agent prompt $agentName $prompt
-    # Return this session reference; collect its handoff later with agent get/read.
-} else {
-    herdr agent prompt $agentName $prompt --wait --timeout 45000
-    herdr agent read $agentName --source recent-unwrapped
-}
+herdr agent prompt $agentName $prompt --wait --timeout 45000
+herdr agent read $agentName --source recent-unwrapped
 ```
 
 ## Handoff or Blocker

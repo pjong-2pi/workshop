@@ -19,10 +19,10 @@ for fresh selections with meaningful alternatives. Otherwise, select directly.
 Supply the scoped assignment and capability requirements,
 not concrete agent names. JEV chooses from all available resources; check only
 its selected resource against the requirements and role boundaries before dispatch.
-Honor a usable result unchanged. After Inspector PASS/LGTM, route publication
-to Fitter using task/capability requirements and all available agents and
-models. Use direct fallback without retries when JEV fails or is unusable.
-Fitter invokes the sole `workshop-publish` skill directly.
+Honor a usable result unchanged. Invoke deterministic `workshop-publish`
+directly after Inspector PASS/LGTM; it needs no JEV selection. After the PR
+exists, wait for explicit user authorization. The user's own `lgtm` in an
+unambiguous current PR discussion counts; Inspector PASS/LGTM does not.
 For live calls, follow the skill's payload disclosure and approved network
 instructions, reusing existing authorization. On unavailable network execution,
 rejected authorization, or a failed/unusable selection, preserve and report the
@@ -40,8 +40,8 @@ requirements genuinely need clarification. Pause only the affected workflow.
 Assign change review and test-sufficiency review only to Inspector. Report a
 missing Inspector instead of substituting Surveyor. After a Craftsman COMPLETE
 handoff, continue implementation tasks through independent Inspector review,
-same-session remediation/re-review as needed, and Fitter publication until a PR
-exists, unless blocked or the user pauses. Worker COMPLETE does not
+same-session remediation/re-review as needed, and direct deterministic
+publication until a PR exists, unless blocked or the user pauses. Worker COMPLETE does not
 finish an implementation task. Publication follows PASS/LGTM; explicit user
 merge authorization remains a separate gate.
 Read-only investigation and planning may finish with a report.
@@ -50,17 +50,26 @@ For merge, accept explicit user authorization, including the user's own `lgtm`
 in a PR discussion when it identifies the current PR unambiguously. Inspector
 PASS/LGTM and publication are not authorization. Clarify ambiguous PR identity.
 Authorization covers the reviewed PR content; if content changes, return it to
-review and obtain authorization again. After authorization, delegate a squash
-merge. Only after confirming success, delegate `/workshop-clear-bench`.
-Cleanup fast-forwards the main checkout only when clean; dirty work remains
-intact, and skipped or blocked updates are reported. Preserve unrelated
-resources and avoid force deletion.
+review and obtain authorization again. After authorization, launch
+`.agents/skills/workshop-fit/scripts/workshop-fit.ps1` in a separate available
+Herdr pane outside the task workspace. Supply the explicit authorization flag,
+reviewed PR/head identity, and exact task/main/runner references. Return the
+pane/workspace and PR/task reference immediately; Foreman remains available for
+other work and collects the final console handoff later from that same pane.
+The runner confirms squash merge before Clear Bench cleanup; dirty main skips
+fast-forward and unrelated resources are preserved. Consume its exact final
+status: `COMPLETE_WITH_RETAINED_BRANCH` means the task worktree was removed
+but the ordinary branch deletion was refused and the branch remains;
+`BLOCKED` means the lifecycle stopped or partially completed. Inspect the
+merge, main-update, and task-cleanup fields; task worktree removal failure is
+blocked and leaves task resources retained. Report all retained resources
+as-is. Force removal is never used.
 
 Delegate all execution and Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized
-merge, and cleanup follow PRD.md when their capabilities are available; report
-missing capabilities rather than implementing their mechanics yourself.
+`workshop-publish` and `workshop-fit` follow PRD.md; Foreman only invokes or
+launches them and consumes results.
 
 ## User Handoff
 

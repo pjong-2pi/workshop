@@ -30,7 +30,7 @@ function global:Invoke-RestMethod {
         $question = $item.Value
         $answer = @{ type = $question.type }
         switch ($question.type) {
-            choice { $answer.choice = if ($global:unknownResource -and $key -eq 'resource') { 'unavailable-agent' } elseif ($global:fitterSelection -and $key -eq 'resource') { 'workshop-fitter' } elseif ($global:nonDelegatableSelection -and $key -eq 'resource') { 'workshop-test-bench' } elseif ($global:implementSelection -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
+            choice { $answer.choice = if ($global:unknownResource -and $key -eq 'resource') { 'unavailable-agent' } elseif ($global:nonDelegatableSelection -and $key -eq 'resource') { 'workshop-test-bench' } elseif ($global:implementSelection -and $key -eq 'resource') { 'workshop-craftsman' } elseif ($global:skillSelection -and $key -eq 'resource') { 'workshop-dispatch' } elseif ($key -eq 'resource') { 'workshop-surveyor' } elseif ($global:badModel -and $key -eq 'model_reasoning') { 'unknown-model/high' } elseif ($key -eq 'model_reasoning') { 'model-a/high' } elseif ($key -in @('Keys', 'Count')) { $key } else { @($question.criteria.GetEnumerator())[0].Key } }
             noul { $answer.noul = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 0.8 } }
             score { $answer.score = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 1.2 } }
         }
@@ -61,8 +61,6 @@ try {
     $foreman.delegatable = $true
     $surveyor.delegatable = $false
     Assert ($catalog.agents.Count -ge 3 -and @($catalog.skills | Where-Object name -EQ 'global-test').Count -eq 1) 'Agents or session skills missing.'
-    $fitter = @($catalog.agents | Where-Object name -EQ 'workshop-fitter')[0]
-    Assert ($fitter -and (Get-Content -LiteralPath $fitter.path -Raw).Contains('Invoke the existing `workshop-publish` skill directly')) 'Stocktake did not discover the complete Fitter definition.'
     Assert (@($catalog.models | Where-Object available).Count -eq 2 -and @($catalog.models | Where-Object name -EQ 'internal').Count -eq 0) 'Model visibility not respected.'
     $catalog.models[0].cost = 3.5
     $catalog.models[0].intelligence = 8
@@ -139,12 +137,6 @@ try {
     $selection = & $route -Kind agent -Assignment 'Fix a scoped implementation defect' -Requirements 'Implement the scoped change and run relevant checks; no review or publication.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
     $global:implementSelection = $false
-    $global:fitterSelection = $true
-    $selection = & $route -Kind agent -Assignment 'Publish reviewed changes' -Requirements 'Invoke workshop-publish with Foreman-supplied reviewed scope and PASS/LGTM. No edits or review.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-fitter' -and $selection.model -eq 'model-a' -and $selection.reasoning -eq 'high') 'Fitter route or selected model/effort was not preserved.'
-    Assert ($global:lastRequest.questions.resource.criteria[$fitter.name].Contains((Get-Content -LiteralPath $fitter.path -Raw))) 'Routing omitted the full Fitter definition.'
-    Assert ($global:lastRequest.questions.model_reasoning.instructions -match 'lowest-cost model and reasoning effort') 'Fitter routing omitted the existing model-cost instruction.'
-    $global:fitterSelection = $false
     $global:unknownResource = $true
     $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
     Assert ($fallback.status -eq 'fallback') 'Unavailable resource selection was accepted.'

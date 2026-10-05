@@ -5,12 +5,10 @@ description: Commit and push an independently approved implementation task and c
 
 # Publish
 
-The selected Fitter invokes this deterministic skill after Foreman supplies
-the independent Inspector's PASS/LGTM and reviewed scope for the current
-change. Confirm that verdict covers the files being published and that blocking
-findings are resolved. Foreman selects Fitter and coordinates its handoff;
-Craftsman and Inspector do not execute publication. This skill never edits
-implementation, merges, or cleans task resources.
+Foreman invokes this deterministic skill after independent Inspector PASS/LGTM
+for the current change. Confirm that verdict covers the files being published
+and blocking findings are resolved. This skill never edits implementation,
+merges, or cleans task resources.
 
 Run the helper using its absolute Workshop path from any project directory:
 
