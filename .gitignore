@@ -5,7 +5,6 @@
 
 # Machine-local configuration, credentials, and runtime state.
 /.local/
-/local/incident-report.md
 /.env
 /.env.*
 !/.env.example

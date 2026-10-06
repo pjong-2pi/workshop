@@ -206,6 +206,8 @@ fast check and need only run for relevant changes.
 
 ## Local state and security
 
+Write Workshop incident reports to `.local/incident-report.md`.
+
 The knowledgebase, routing catalog under `.local/`, root `.env` files (except
 `.env.example`), logs, raw eval runs, managed projects, temporary worktrees, and
 the local incident report are excluded from Git. Keep credentials and private
