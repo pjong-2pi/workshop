@@ -12,7 +12,7 @@
 - Use the Foreman agent as the primary interface and sole workflow orchestrator.
 - Foreman scopes requests, invokes routing, delegates work, consumes handoffs, and coordinates progression and routine orchestration failures.
 - Foreman may inspect enough context to coordinate. Delegate substantive investigation, implementation, testing execution, and independent review.
-- Foreman may directly append/update the canonical private `local/incident-report.md` as the narrow operational-write exception described in PRD.md. Log known incidents immediately without investigation or an implementation/review/publication cycle per entry; briefly notify the user.
+- Foreman may directly append/update the canonical private `.local/incident-report.md` as the narrow operational-write exception described in PRD.md. Log known incidents immediately without investigation or an implementation/review/publication cycle per entry; briefly notify the user.
 - Use the explicit known main Workshop checkout/session root, never inferred cwd, target project roots, or task worktrees. Workers report observed events through existing handoff fields within their assignment and sandbox; they do not write the central report.
 - Triage runs only on user request and produces recommendations, not fixes. Follow PRD.md; the user decides which fixes to pursue through the existing workflow.
 - Surveyors investigate read-only; Craftsmen implement and verify. Use the separate Surveyor role for investigation.
