@@ -34,6 +34,7 @@ function global:Invoke-RestMethod {
             noul { $answer.noul = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 0.8 } }
             score { $answer.score = if ($null -ne $global:invalidNumeric) { $global:invalidNumeric } else { 1.2 } }
         }
+        if ($global:badAnswerType -and $key -eq 'resource') { $answer.type = 'score' }
         $answers[$key] = $answer
     }
     if ($global:malformed) { $answers.Remove('resource') }
@@ -44,12 +45,14 @@ try {
     $fixtureRoot = Join-Path $temporary 'workshop'
     $agentDirectory = Join-Path $fixtureRoot '.agents/agents'
     $skillDirectory = Join-Path $fixtureRoot '.agents/skills/workshop-dispatch'
-    New-Item -ItemType Directory -Path $agentDirectory, $skillDirectory | Out-Null
+    $choiceDirectory = Join-Path $fixtureRoot '.agents/skills/workshop-jev-route-job/scripts'
+    New-Item -ItemType Directory -Path $agentDirectory, $skillDirectory, $choiceDirectory | Out-Null
     Copy-Item -Path (Join-Path $root '.agents/agents/*.md') -Destination $agentDirectory
     Copy-Item -LiteralPath (Join-Path $root '.agents/skills/workshop-dispatch/SKILL.md') -Destination $skillDirectory
+    Copy-Item -Path (Join-Path $scripts '*.ps1') -Destination $choiceDirectory
     $syntheticPath = Join-Path $agentDirectory 'workshop-test-bench.md'
     Set-Content -LiteralPath $syntheticPath -Value "---`nname: workshop-test-bench`ndescription: Synthetic non-delegatable role.`ndelegatable: false`n---`nThis role cannot accept delegated work."
-    $catalogPath = Join-Path $temporary 'catalog.json'
+    $catalogPath = Join-Path $fixtureRoot '.local/routing-catalog.json'
     $skills = @(@{name='global-test';description='Global skill';path=(Join-Path $root 'AGENTS.md')}) | ConvertTo-Json -Compress
     & $stocktake -WorkshopRoot $fixtureRoot -CatalogPath $catalogPath -SessionSkillsJson $skills | Out-Null
     Assert ($LASTEXITCODE -eq 0) 'Initial discovery failed.'
@@ -112,18 +115,40 @@ try {
     }
     $global:invalidNumeric = $null
 
-    $route = Join-Path $scripts 'workshop-route-job.ps1'
-    $requirements = 'Read-only evidence gathering; no edits, code review, or delegation.'
-    $selection = & $route -Kind agent -Assignment 'Read-only requirements investigation' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-surveyor' -and $selection.model -eq 'model-a' -and $selection.reasoning -eq 'high') "Usable selection changed: $($selection | ConvertTo-Json -Compress)"
+    # Execute the documented examples with current Foreman inputs; HTTP remains mocked.
+    $skillText = Get-Content (Join-Path $root '.agents/skills/workshop-jev-route-job/SKILL.md') -Raw
+    Assert ($skillText -notmatch '[A-Za-z]:[/\\]Users[/\\]') 'Routing skill contains a machine-specific user path.'
+    $examples = [regex]::Matches($skillText, '(?s)```powershell\r?\n(.*?)\r?\n```')
+    $agentExample = [scriptblock]::Create($examples[0].Groups[1].Value.Replace("'absolute path to Workshop checkout'", "'$fixtureRoot'"))
+    $skillExample = [scriptblock]::Create($examples[1].Groups[1].Value.Replace("'absolute path to Workshop checkout'", "'$fixtureRoot'"))
+    $assignment = 'Trace the current routing payload'
+    $requirements = "Gather evidence read-only.`nPreserve role boundaries and cite sources."
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
+    $callsBefore = $global:apiCalls
+    . $agentExample
+    $agentInputJson = $inputJson
+    Assert ($answers.resource.choice -eq 'workshop-surveyor' -and $answers.model_reasoning.choice -eq 'model-a/high') 'Usable JEV selection changed.'
+    Assert ($global:apiCalls -eq $callsBefore + 1 -and $global:lastRequest.questions.Count -eq 2) 'Agent/model example did not use one request.'
     Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count) 'JEV did not receive every agent.'
     Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'JEV did not receive every available model/effort.'
-    Assert ($global:lastRequest.state.requirements -eq $requirements -and $global:lastRequest.state.assignment -eq 'Read-only requirements investigation') 'Task requirements were not passed unchanged.'
+    Assert ($global:lastRequest.state.requirements -eq $expectedState.requirements -and $global:lastRequest.state.assignment -eq $expectedState.assignment) 'Current agent task inputs were not passed unchanged.'
+    # Verify the submitted policy, not the fixed mock's ability to judge task adequacy.
+    $policy = $global:lastRequest.questions.model_reasoning.instructions
+    Assert ($policy -match '(?i)first select the lowest-cost adequate model.*then select the lowest adequate reasoning effort within that model') 'Payload omitted model-first, within-model effort selection policy.'
+    Assert ($policy -match 'Escalate.*only when the task requires it' -and $policy -match 'not measured prices or effort-level cost' -and $policy -match 'Unknown ratings stay unknown') 'Payload omitted task-required escalation or rating limits.'
     foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full role boundaries.' }
+    Assert ($global:lastRequest.questions.model_reasoning.criteria['model-a/high'] -match 'manual cost rating=3.5; manual intelligence rating=8' -and $global:lastRequest.questions.model_reasoning.criteria['model-b/medium'] -match 'manual cost rating=unknown; manual intelligence rating=unknown') 'Existing or unknown ratings were misrepresented.'
+    Assert ($global:lastRequest.questions.model_reasoning.criteria['model-a/high'] -replace 'Reasoning=high', 'Reasoning=low' -eq $global:lastRequest.questions.model_reasoning.criteria['model-a/low']) 'Manual model ratings changed by effort.'
+    $new = @($catalog.models | Where-Object name -EQ 'model-b')[0]
+    $new.cost = 1
+    $catalog | ConvertTo-Json -Depth 12 | Set-Content $catalogPath
+    . $agentExample
+    $agentInputJson = $inputJson
+    Assert ($answers.model_reasoning.choice -eq 'model-a/high' -and $global:lastRequest.questions.model_reasoning.criteria['model-b/medium'] -match 'manual cost rating=1; manual intelligence rating=unknown') 'A valid higher-cost choice was overridden by a cheaper candidate.'
     $global:nonDelegatableSelection = $true
     $callsBefore = $global:apiCalls
-    $fallback = & $route -Kind agent -Assignment 'Clean up task resources' -Requirements 'Release owned resources and preserve unrelated work; no orchestration.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback' -and $fallback.reason -eq 'Unusable agent choice: workshop-test-bench is not delegatable.') 'Non-delegatable selection did not return the original fallback reason.'
+    . $agentExample
+    Assert ($answers.resource.choice -eq 'workshop-test-bench' -and @($catalog.agents | Where-Object { $_.name -eq $answers.resource.choice -and $_.delegatable -eq $false }).Count -eq 1) 'Foreman did not receive the non-delegatable selection for semantic checking.'
     Assert ($global:apiCalls -eq $callsBefore + 1) 'Non-delegatable selection retried or rerouted.'
     Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count -and $global:lastRequest.questions.resource.criteria.ContainsKey('workshop-test-bench') -and $global:lastRequest.questions.resource.criteria.ContainsKey('workshop-foreman')) 'Non-delegatable agents were filtered from the full payload.'
     foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full definitions for every agent.' }
@@ -134,34 +159,50 @@ try {
     }
     $global:nonDelegatableSelection = $false
     $global:implementSelection = $true
-    $selection = & $route -Kind agent -Assignment 'Fix a scoped implementation defect' -Requirements 'Implement the scoped change and run relevant checks; no review or publication.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($selection.status -eq 'selected' -and $selection.resource -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
+    $assignment = 'Fix a scoped implementation defect'
+    $requirements = 'Implement the scoped change and run relevant checks; no review or publication.'
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
+    . $agentExample
+    Assert ($global:lastRequest.state.assignment -eq $expectedState.assignment -and $global:lastRequest.state.requirements -eq $expectedState.requirements) 'Agent example reused an earlier task instead of current inputs.'
+    Assert ($answers.resource.choice -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
     $global:implementSelection = $false
-    $global:unknownResource = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'Unavailable resource selection was accepted.'
-    $global:unknownResource = $false
-    $global:badModel = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'Unsupported model/effort selection was accepted.'
-    $global:badModel = $false
-    $global:malformed = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'Malformed answer was accepted.'
-    $global:malformed = $false
     $global:skillSelection = $true
-    $skill = & $route -Kind skill -Assignment 'Choose a workflow support skill' -Requirements 'Help coordinate a scoped development workflow.' -CatalogPath $catalogPath -Endpoint $endpoint | ConvertFrom-Json
-    Assert ($skill.status -eq 'selected' -and $skill.resource -eq 'workshop-dispatch' -and $global:lastRequest.questions.resource.criteria.Count -eq $catalog.skills.Count) 'Skill routing did not use all skills.'
+    $assignment = 'Execute the current scoped investigation'
+    $requirements = 'Run the assignment through native Herdr and return its handoff.'
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
+    $callsBefore = $global:apiCalls
+    . $skillExample
+    Assert ($global:lastRequest.state.assignment -eq $expectedState.assignment -and $global:lastRequest.state.requirements -eq $expectedState.requirements) 'Skill example did not use current task inputs.'
+    Assert ($answers.resource.choice -eq 'workshop-dispatch' -and $global:lastRequest.questions.resource.criteria.Count -eq $catalog.skills.Count) 'Skill routing did not use all skills.'
+    Assert ($global:apiCalls -eq $callsBefore + 1 -and $global:lastRequest.questions.Count -eq 1) 'Skill example did not use one request.'
+    foreach ($skill in $catalog.skills) { Assert ($global:lastRequest.questions.resource.criteria[$skill.name] -eq $skill.description) 'Skill description was not passed unchanged.' }
     $global:skillSelection = $false
+
+    foreach ($case in @(
+        @{flag='unknownResource';reason="TypeSafe chose an unknown option for 'resource'."},
+        @{flag='badModel';reason="TypeSafe chose an unknown option for 'model_reasoning'."},
+        @{flag='malformed';reason="TypeSafe response is missing a valid 'resource' answer."},
+        @{flag='badAnswerType';reason="TypeSafe response is missing a valid 'resource' answer."},
+        @{flag='apiFailure';reason='TypeSafe request failed: mock API unavailable'}
+    )) {
+        Set-Variable -Scope Global -Name $case.flag -Value $true
+        $callsBefore = $global:apiCalls
+        $result = & (Join-Path $scripts 'workshop-jev-choice.ps1') -InputJson $agentInputJson -Endpoint $endpoint 2>&1
+        Assert (-not $? -and $result -is [System.Management.Automation.ErrorRecord] -and $result.Exception.Message -eq $case.reason) "Lost original failure: $($case.flag)."
+        Assert ($global:apiCalls -eq $callsBefore + 1) 'Failed choice retried or rerouted.'
+        Set-Variable -Scope Global -Name $case.flag -Value $false
+    }
     $global:apiFailure = $true
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'API failure did not fall back.'
-    Assert ($fallback.reason -eq 'TypeSafe request failed: mock API unavailable') 'Routing lost the original helper error from its structured fallback.'
+    $result = . $agentExample 2>&1
+    Assert ($null -eq $answers -and $result.Exception.Message -eq 'TypeSafe request failed: mock API unavailable') 'Documented example retained stale answers or lost the original error.'
     $global:apiFailure = $false
+    $callsBefore = $global:apiCalls
+    $result = & (Join-Path $scripts 'workshop-jev-choice.ps1') -InputJson $agentInputJson -Endpoint 'https://example.com' 2>&1
+    Assert (-not $? -and $result.Exception.Message -eq 'Endpoint override must be local.' -and $global:apiCalls -eq $callsBefore) 'Nonlocal endpoint boundary failed.'
     Remove-Item Env:\TYPESAFE_API_KEY
-    $fallback = & $route -Kind agent -Assignment 'Read-only' -Requirements $requirements -CatalogPath $catalogPath -Endpoint $endpoint 2>$null | ConvertFrom-Json
-    Assert ($fallback.status -eq 'fallback') 'Missing key did not fall back.'
-    'PASS: discovery, source-authoritative delegatability, ratings, failed refresh, reserved-name batches, numeric answers, complete route choices, generic delegation boundary, and fallback.'
+    $result = & (Join-Path $scripts 'workshop-jev-choice.ps1') -InputJson $agentInputJson -Endpoint $endpoint 2>&1
+    Assert (-not $? -and $result.Exception.Message -eq 'TYPESAFE_API_KEY is unavailable.' -and $global:apiCalls -eq $callsBefore) 'Missing-key boundary failed.'
+    'PASS: discovery, delegatability metadata, ratings, failed refresh, reserved-name batches, numeric answers, current-task one-shot examples, model-first policy payload, all choices, unchanged higher-cost selection, original failures, and endpoint/key boundaries.'
 } finally {
     $env:TYPESAFE_API_KEY = $savedKey
     Remove-Item Function:\codex,Function:\Invoke-RestMethod -ErrorAction SilentlyContinue

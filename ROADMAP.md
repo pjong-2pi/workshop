@@ -133,9 +133,10 @@ Observed friction and remedy before further roadmap features:
 - Routing and Foreman instructions now specify the normal approved
   network-enabled invocation, disclosure of the normal routing payload,
   respecting approval rejection, and direct selection without retries or proxy
-  changes. Structured fallback preserves the original helper error so Foreman
-  can distinguish execution-context, transport, and service/API failures.
-  A focused mocked regression covers error preservation.
+  changes. At that time, the routing wrapper's structured fallback preserved
+  the original helper error so Foreman could distinguish execution-context,
+  transport, and service/API failures. A focused mocked regression covered
+  error preservation.
 - Foreman subsequently used the main checkout helper through the ordinary
   approved network-enabled invocation. It reached `api.typesafe.ai` and returned
   a usable reviewer selection: `workshop-inspector` with `gpt-6.1-sol/high`.
