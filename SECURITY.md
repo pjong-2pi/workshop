@@ -11,8 +11,7 @@ Do not post credentials, private routing payloads, or exploitable vulnerability
 details in public issues or pull requests.
 
 Use GitHub's [private vulnerability reporting form](https://github.com/pjong-2pi/workshop/security/advisories/new).
-The maintainer must enable private vulnerability reporting when the repository
-becomes public. This document does not confirm that reporting is already enabled.
+Private vulnerability reporting is enabled for this public repository.
 If the form is unavailable, do not disclose sensitive details in public issues
 or pull requests.
 
