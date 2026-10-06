@@ -7,6 +7,12 @@
 - Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, `workshop-inspector`, and `workshop-fitter`. Use `workshop-dispatch` for delegation.
 - Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
+## Locate Projects
+
+- Before project work, consult `.local/project-registry.md` in the known main Workshop checkout. Here, `/.local` means that checkout's `.local` directory, not a drive root or task worktree.
+- Resolve registry paths relative to the main Workshop checkout, then read the target project's `AGENTS.md` if present.
+- Ask when a requested project is missing or ambiguous in the registry; do not guess. Keep the registry private and untracked, and managed project repositories independent of Workshop.
+
 ## Foreman Orchestrates; Incident Records Are a Narrow Exception
 
 - Use the Foreman agent as the primary interface and sole workflow orchestrator.

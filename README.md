@@ -1,6 +1,6 @@
 # Workshop
 
-Workshop is a Git-clonable, project-independent workspace for coordinating
+Workshop, inspired by: [kunchenguid/firstmate](https://github.com/kunchenguid/firstmate), is a Git-clonable, project-independent workspace for coordinating
 development on Windows with Codex + Herdr already installed. It contains role
 instructions, skills, and PowerShell helpers for delegated investigation,
 implementation, optional JEV routing, independent review, publication, and
