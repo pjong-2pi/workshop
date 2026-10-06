@@ -1,11 +1,28 @@
 # Workshop
 
-Workshop coordinates development work on Windows with Codex + Herdr already
-installed. [PRD.md](PRD.md) defines requirements; [ROADMAP.md](ROADMAP.md)
-defines milestones. This guide covers delegated execution, routing, independent
-review, and publication. Merge and cleanup capabilities remain on the roadmap.
+Workshop is a Git-clonable, project-independent workspace for coordinating
+development on Windows with Codex + Herdr already installed. It contains role
+instructions, skills, and PowerShell helpers for delegated investigation,
+implementation, optional JEV routing, independent review, publication, and
+explicitly authorized merge and cleanup. Target project repositories remain
+independent of Workshop.
+
+The repository is [pjong-2pi/workshop](https://github.com/pjong-2pi/workshop).
+[PRD.md](PRD.md) defines requirements; [ROADMAP.md](ROADMAP.md) records milestones
+and earlier demonstration evidence. Current role and skill definitions describe
+the implemented workflow.
 
 ## Start as Foreman
+
+Clone the repository, then open it in Herdr:
+
+```powershell
+git clone https://github.com/pjong-2pi/workshop.git
+```
+
+Workshop assumes Codex, Herdr, Git, and PowerShell 7 are available. Publication
+and merge also require an authenticated GitHub CLI (`gh`). Workshop does not
+install or configure these tools.
 
 Open the main repository in Herdr and start Codex there. Keep that session at
 the visible Spaces root. In the current Codex session, ask:
@@ -29,10 +46,12 @@ session; they are not automatically registered Codex agent types.
 | [workshop-craftsman](.agents/agents/workshop-craftsman.md) | Implement a scoped change and verify it |
 | [workshop-surveyor](.agents/agents/workshop-surveyor.md) | Investigate a scoped question read-only |
 | [workshop-inspector](.agents/agents/workshop-inspector.md) | Independently review changes and test sufficiency read-only |
+| [workshop-fitter](.agents/agents/workshop-fitter.md) | Merge an explicitly authorized reviewed PR, confirm success, and invoke cleanup |
 | [workshop-dispatch](.agents/skills/workshop-dispatch/SKILL.md) | Native Herdr isolation, role launch, and handoff retrieval |
 | [workshop-stocktake](.agents/skills/workshop-stocktake/SKILL.md) | Discover session resources and refresh the local routing catalog |
 | [workshop-jev-route-job](.agents/skills/workshop-jev-route-job/SKILL.md) | Make and validate bounded JEV selections |
 | [workshop-publish](.agents/skills/workshop-publish/SKILL.md) | Publish an Inspector-approved scoped change as a PR |
+| [workshop-clear-bench](.agents/skills/workshop-clear-bench/SKILL.md) | Remove the assigned clean task worktree after confirmed merge |
 
 At session start, Stocktake takes the current Codex Available skills list,
 including global and plugin skills, and reads Workshop agent/skill definitions
@@ -52,6 +71,11 @@ sole `workshop-publish` capability directly after review. Missing TypeSafe acces
 or an unusable answer triggers the PRD's direct-selection fallback. Set
 `TYPESAFE_API_KEY` in the environment for live JEV calls; no key is stored in
 Workshop. The routing skill gives the exact invocation and typed script inputs.
+Live routing sends the scoped assignment, requirements, full role definitions,
+and available skill/model metadata to `https://api.typesafe.ai/v1/systemone`.
+Authorize that scope before routing; another user's local consent does not
+grant consent for your session. Respect native network controls and use direct
+selection if routing is unavailable or rejected.
 Use the native picker/runtime check in dispatch to confirm the selected model
 is accepted by the current account; the native catalog alone cannot prove
 account entitlement for every listed model.
@@ -118,9 +142,22 @@ assessment. Missing Inspector availability blocks review.
 For implementation tasks, Foreman continues after Craftsman COMPLETE through
 Inspector review, remediation in the same Craftsman and re-review in the same
 Inspector session, then delegated publication until a PR exists, unless blocked
-or the user pauses. After PASS/LGTM, `workshop-publish` stages only Foreman's
+or the user pauses. After PASS/LGTM, Foreman returns the approved scope to the
+same Craftsman, which invokes `workshop-publish`. It stages only Foreman's
 explicit reviewed file list, commits, pushes, and creates the PR. Worker COMPLETE
 does not finish the task; PR creation does not authorize merging.
+
+After explicit user merge authorization, Foreman dispatches Fitter with the
+reviewed PR identity and head SHA. Fitter checks that identity, required checks
+and reviews, and squash availability, then requests an immediate squash merge
+bound to the reviewed SHA. It confirms the merge before invoking Clear Bench;
+failed or unconfirmed merges retain the task resources.
+
+Clear Bench fast-forwards main only when clean, removes only the assigned clean
+task worktree through Herdr, and preserves dirty or unrelated work. It never
+force-deletes resources. If ordinary branch deletion refuses after a squash,
+Fitter reports the retained branch. Foreman collects the merge and cleanup
+handoff; it does not execute these operations itself.
 
 Craftsman runs checks relevant to the assigned change and reports commands,
 actual results, and limitations. For a documentation change, check local links
@@ -167,10 +204,20 @@ Compare file changes and native evidence before and after each scenario. Reuse
 the task worktree sequentially. Model-backed smoke tests are separate from the
 fast check and need only run for relevant changes.
 
-## Planned progression
+## Local state and security
 
-Milestone 2 is complete: Stocktake and bounded JEV routing. Milestone 3 is
-complete: independent Inspector review and same-session remediation/re-review.
-Milestone 4 is partially implemented with `workshop-publish`; merge and
-`workshop-clear-bench` do not yet exist. Merge still requires explicit user
-authorization. The full end-to-end demonstration is Milestone 5.
+Write Workshop incident reports to `.local/incident-report.md`.
+
+The knowledgebase, routing catalog under `.local/`, root `.env` files (except
+`.env.example`), logs, raw eval runs, managed projects, temporary worktrees, and
+the local incident report are excluded from Git. Keep credentials and private
+notes in ignored local state; ignore rules do not remove already tracked files
+or Git history. See [SECURITY.md](SECURITY.md) for security reporting status.
+
+Workshop is licensed under the [MIT License](LICENSE).
+
+Windows with Codex + Herdr is the current target. A new-machine bootstrapper,
+other operating systems, and other harnesses remain deferred in the PRD.
+Fitter and Clear Bench are implemented; earlier roadmap status text predates
+those definitions. Their presence does not by itself establish completion of
+the full end-to-end acceptance demonstration.
