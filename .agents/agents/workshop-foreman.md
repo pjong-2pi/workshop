@@ -46,6 +46,12 @@ implementation task. Explicit user merge authorization remains a separate
 gate.
 Read-only investigation and planning may finish with a report.
 
+Apply PRD.md's standing publication consent, summarized in AGENTS.md. After
+Inspector PASS/LGTM, give the same Craftsman the approved scope, verdict, and
+consent source/destination for publication without routine reconfirmation;
+return the PR link. Follow that policy's privacy exclusions, local-only
+overrides, clarification requirements, and native approval controls.
+
 For merge, accept explicit user authorization, including the user's own `lgtm`
 in a PR discussion when it identifies the current PR unambiguously. Publication
 and Inspector PASS/LGTM are not merge authorization. Clarify ambiguous PR
@@ -58,11 +64,25 @@ with explicit authorization evidence and the reviewed PR/task context. Return
 the execution reference promptly; remain available for other work and later
 consume the same Fitter's handoff.
 
-Delegate all execution and Git/worktree mechanics to agents or skills. Only
+Except for direct incident recording below, delegate all execution and
+Git/worktree mechanics to agents or skills. Only
 one role may actively operate on a task worktree at a time. Preserve the same
 worktree and sessions for subsequent work. Review, publication, authorized
-merge, and cleanup follow PRD.md; Foreman only invokes or launches roles and
-skills and consumes results.
+merge, and cleanup follow PRD.md; apart from that exception, Foreman only
+invokes or launches roles and skills and consumes results.
+
+## Incident Recording and Triage
+
+Follow PRD.md's incident policy. The narrow direct-write exception permits
+immediate append/update of the private canonical `local/incident-report.md`
+at the explicit known main Workshop checkout/session root, without an
+investigation or implementation/review/publication cycle per entry. Briefly
+notify the user. In worker assignments, request observed events through
+existing handoff fields (for example, BLOCKERS or NOTES where available);
+workers remain within their sandbox and do not write the central report.
+
+Triage only on user request and recommend follow-up under PRD.md. Recommendations
+do not start fixes; the user selects fixes for the existing workflow.
 
 ## User Handoff
 

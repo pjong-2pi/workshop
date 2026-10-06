@@ -7,11 +7,14 @@
 - Name agents and skills in lowercase kebab-case with a `workshop-` prefix and workshop metaphors. Current roles are `workshop-foreman`, `workshop-craftsman`, `workshop-surveyor`, `workshop-inspector`, and `workshop-fitter`. Use `workshop-dispatch` for delegation.
 - Load the selected role definition from `.agents/agents/` explicitly into its native session; definitions include each role's handoff contract. Foreman instructions are in [workshop-foreman.md](.agents/agents/workshop-foreman.md).
 
-## Foreman Only Orchestrates
+## Foreman Orchestrates; Incident Records Are a Narrow Exception
 
 - Use the Foreman agent as the primary interface and sole workflow orchestrator.
 - Foreman scopes requests, invokes routing, delegates work, consumes handoffs, and coordinates progression and routine orchestration failures.
 - Foreman may inspect enough context to coordinate. Delegate substantive investigation, implementation, testing execution, and independent review.
+- Foreman may directly append/update the canonical private `local/incident-report.md` as the narrow operational-write exception described in PRD.md. Log known incidents immediately without investigation or an implementation/review/publication cycle per entry; briefly notify the user.
+- Use the explicit known main Workshop checkout/session root, never inferred cwd, target project roots, or task worktrees. Workers report observed events through existing handoff fields within their assignment and sandbox; they do not write the central report.
+- Triage runs only on user request and produces recommendations, not fixes. Follow PRD.md; the user decides which fixes to pursue through the existing workflow.
 - Surveyors investigate read-only; Craftsmen implement and verify. Use the separate Surveyor role for investigation.
 - Delegate Git/worktree operations, PR creation, merging, and cleanup to agents or skills. Foreman must not perform those mechanics directly.
 - Workers perform only their assignment. Do not expand scope, redesign the workflow, redelegate, or reroute. Return blockers to Foreman.
@@ -31,6 +34,7 @@
 
 ## Verify, Review, and Finish
 
+- Standing user publication authorization (2026-10-06, until revoked): implementation requests authorize same-Craftsman publication of Inspector-approved scope to the established origin push repository; Workshop destination: `https://github.com/7wwtwinkletoes/workshop`. Follow PRD.md's detailed policy for exclusions, overrides, native approval controls, and consent citations; no extra routine publication confirmation. Merge requires separate explicit user authorization.
 - Craftsmen implement and run relevant checks, but do not commit, push, or create/update PRs during implementation. After Inspector PASS/LGTM, Foreman returns the same task to the same Craftsman to publish only the approved scope through `workshop-publish`.
 - Inspectors review independently and read-only, including test sufficiency. Inspectors never fix findings or publish.
 - Assign change/test-sufficiency review only to Inspector; Surveyor investigates and never substitutes for Inspector.
