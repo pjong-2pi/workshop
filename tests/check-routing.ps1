@@ -115,10 +115,15 @@ try {
     }
     $global:invalidNumeric = $null
 
-    # Execute the documented examples, changing only the checkout path; HTTP remains mocked.
-    $examples = [regex]::Matches((Get-Content (Join-Path $root '.agents/skills/workshop-jev-route-job/SKILL.md') -Raw), '(?s)```powershell\r?\n(.*?)\r?\n```')
+    # Execute the documented examples with current Foreman inputs; HTTP remains mocked.
+    $skillText = Get-Content (Join-Path $root '.agents/skills/workshop-jev-route-job/SKILL.md') -Raw
+    Assert ($skillText -notmatch '[A-Za-z]:[/\\]Users[/\\]') 'Routing skill contains a machine-specific user path.'
+    $examples = [regex]::Matches($skillText, '(?s)```powershell\r?\n(.*?)\r?\n```')
     $agentExample = [scriptblock]::Create($examples[0].Groups[1].Value.Replace("'absolute path to Workshop checkout'", "'$fixtureRoot'"))
     $skillExample = [scriptblock]::Create($examples[1].Groups[1].Value.Replace("'absolute path to Workshop checkout'", "'$fixtureRoot'"))
+    $assignment = 'Trace the current routing payload'
+    $requirements = "Gather evidence read-only.`nPreserve role boundaries and cite sources."
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
     $callsBefore = $global:apiCalls
     . $agentExample
     $agentInputJson = $inputJson
@@ -126,7 +131,11 @@ try {
     Assert ($global:apiCalls -eq $callsBefore + 1 -and $global:lastRequest.questions.Count -eq 2) 'Agent/model example did not use one request.'
     Assert ($global:lastRequest.questions.resource.criteria.Count -eq $catalog.agents.Count) 'JEV did not receive every agent.'
     Assert ($global:lastRequest.questions.model_reasoning.criteria.Count -eq 3) 'JEV did not receive every available model/effort.'
-    Assert ($global:lastRequest.state.requirements -eq 'Gather cited evidence read-only; no edits, code review, or delegation.' -and $global:lastRequest.state.assignment -eq 'Read-only requirements investigation') 'Task requirements were not passed unchanged.'
+    Assert ($global:lastRequest.state.requirements -eq $expectedState.requirements -and $global:lastRequest.state.assignment -eq $expectedState.assignment) 'Current agent task inputs were not passed unchanged.'
+    # Verify the submitted policy, not the fixed mock's ability to judge task adequacy.
+    $policy = $global:lastRequest.questions.model_reasoning.instructions
+    Assert ($policy -match '(?i)first select the lowest-cost adequate model.*then select the lowest adequate reasoning effort within that model') 'Payload omitted model-first, within-model effort selection policy.'
+    Assert ($policy -match 'Escalate.*only when the task requires it' -and $policy -match 'not measured prices or effort-level cost' -and $policy -match 'Unknown ratings stay unknown') 'Payload omitted task-required escalation or rating limits.'
     foreach ($agent in $catalog.agents) { Assert ($global:lastRequest.questions.resource.criteria[$agent.name].Contains((Get-Content $agent.path -Raw))) 'JEV did not receive full role boundaries.' }
     Assert ($global:lastRequest.questions.model_reasoning.criteria['model-a/high'] -match 'manual cost rating=3.5; manual intelligence rating=8' -and $global:lastRequest.questions.model_reasoning.criteria['model-b/medium'] -match 'manual cost rating=unknown; manual intelligence rating=unknown') 'Existing or unknown ratings were misrepresented.'
     Assert ($global:lastRequest.questions.model_reasoning.criteria['model-a/high'] -replace 'Reasoning=high', 'Reasoning=low' -eq $global:lastRequest.questions.model_reasoning.criteria['model-a/low']) 'Manual model ratings changed by effort.'
@@ -150,15 +159,20 @@ try {
     }
     $global:nonDelegatableSelection = $false
     $global:implementSelection = $true
-    $implementationInput = $agentInputJson | ConvertFrom-Json -AsHashtable
-    $implementationInput.state.assignment = 'Fix a scoped implementation defect'
-    $implementationInput.state.requirements = 'Implement the scoped change and run relevant checks; no review or publication.'
-    $answers = & (Join-Path $scripts 'workshop-jev-choice.ps1') -InputJson ($implementationInput | ConvertTo-Json -Depth 20 -Compress) -Endpoint $endpoint | ConvertFrom-Json -AsHashtable
+    $assignment = 'Fix a scoped implementation defect'
+    $requirements = 'Implement the scoped change and run relevant checks; no review or publication.'
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
+    . $agentExample
+    Assert ($global:lastRequest.state.assignment -eq $expectedState.assignment -and $global:lastRequest.state.requirements -eq $expectedState.requirements) 'Agent example reused an earlier task instead of current inputs.'
     Assert ($answers.resource.choice -eq 'workshop-craftsman') 'A different usable JEV agent choice was rejected or changed.'
     $global:implementSelection = $false
     $global:skillSelection = $true
+    $assignment = 'Execute the current scoped investigation'
+    $requirements = 'Run the assignment through native Herdr and return its handoff.'
+    $expectedState = @{assignment=$assignment;requirements=$requirements}
     $callsBefore = $global:apiCalls
     . $skillExample
+    Assert ($global:lastRequest.state.assignment -eq $expectedState.assignment -and $global:lastRequest.state.requirements -eq $expectedState.requirements) 'Skill example did not use current task inputs.'
     Assert ($answers.resource.choice -eq 'workshop-dispatch' -and $global:lastRequest.questions.resource.criteria.Count -eq $catalog.skills.Count) 'Skill routing did not use all skills.'
     Assert ($global:apiCalls -eq $callsBefore + 1 -and $global:lastRequest.questions.Count -eq 1) 'Skill example did not use one request.'
     foreach ($skill in $catalog.skills) { Assert ($global:lastRequest.questions.resource.criteria[$skill.name] -eq $skill.description) 'Skill description was not passed unchanged.' }
@@ -188,7 +202,7 @@ try {
     Remove-Item Env:\TYPESAFE_API_KEY
     $result = & (Join-Path $scripts 'workshop-jev-choice.ps1') -InputJson $agentInputJson -Endpoint $endpoint 2>&1
     Assert (-not $? -and $result.Exception.Message -eq 'TYPESAFE_API_KEY is unavailable.' -and $global:apiCalls -eq $callsBefore) 'Missing-key boundary failed.'
-    'PASS: discovery, delegatability metadata, ratings, failed refresh, reserved-name batches, numeric answers, runnable one-shot examples, all choices, unchanged higher-cost selection, original failures, and endpoint/key boundaries.'
+    'PASS: discovery, delegatability metadata, ratings, failed refresh, reserved-name batches, numeric answers, current-task one-shot examples, model-first policy payload, all choices, unchanged higher-cost selection, original failures, and endpoint/key boundaries.'
 } finally {
     $env:TYPESAFE_API_KEY = $savedKey
     Remove-Item Function:\codex,Function:\Invoke-RestMethod -ErrorAction SilentlyContinue

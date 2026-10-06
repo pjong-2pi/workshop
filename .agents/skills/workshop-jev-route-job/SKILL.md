@@ -7,11 +7,11 @@ description: Request a bounded agent, skill, model, or reasoning selection from 
 
 Supply the scoped assignment, capability requirements, and Stocktake catalog path. Describe the required capabilities rather than a preferred concrete identity. Use the existing `workshop-jev-choice.ps1` helper directly; it requests bounded choices and returns JSON without executing the selected work. Use JEV only when there are meaningful alternatives; each choice question needs 2 to 255 options. Otherwise select directly.
 
-Live calls send the assignment, requirements, full role definitions, and available skill/model metadata to `https://api.typesafe.ai/v1/systemone`, authenticated with the existing `TYPESAFE_API_KEY`. Disclose this normal routing payload and destination when obtaining authorization; reuse existing authorization for that scope and never print the key. When the standing routing consent is loaded from `C:/Users/Perkins Jon/.codex/AGENTS.md`, surface it before routing and cite that source, scope, and endpoint in the approval justification. That consent covers routing metadata only, not arbitrary source files or unrelated secrets; other destinations or payload scope need fresh consent.
+Live calls send the assignment, requirements, full role definitions, and available skill/model metadata to `https://api.typesafe.ai/v1/systemone`, authenticated with the existing `TYPESAFE_API_KEY`. Disclose this normal routing payload and destination when obtaining authorization; reuse existing authorization for that scope and never print the key. When standing routing consent is loaded, surface it before routing and cite its actual source, authorized scope, and endpoint in the approval justification. That consent covers routing metadata only, not arbitrary source files or unrelated secrets; other destinations or payload scope need fresh consent.
 
 Invoke live helpers through the harness's approved network-enabled path. Never alter proxies, bypass the sandbox, or try alternate network paths. If network-enabled execution is unavailable or authorization is rejected, respect that result and return the original failure or rejection reason without retrying.
 
-For agent and model/effort selection, send all catalog agents with full definitions and delegatability, plus every available model's supported efforts, in **one request**. The catalog retains absent models for manual ratings; only `available` models enter routing. Run this example from any project directory using an explicit Workshop path in the approved execution context:
+For agent and model/effort selection, send all catalog agents with full definitions and delegatability, plus every available model's supported efforts, in **one request**. The catalog retains absent models for manual ratings; only `available` models enter routing. Both examples use `$assignment` and `$requirements` supplied by Foreman for the current routing decision. Bind those variables to the current scoped assignment and capability requirements before running either example. Run from any project directory using an explicit Workshop path in the approved execution context:
 
 ```powershell
 $workshopRoot = 'absolute path to Workshop checkout'
@@ -34,8 +34,8 @@ foreach ($model in @($catalog.models | Where-Object available)) {
 }
 $inputJson = @{
     state = @{
-        assignment = 'Read-only requirements investigation'
-        requirements = 'Gather cited evidence read-only; no edits, code review, or delegation.'
+        assignment = $assignment
+        requirements = $requirements
     }
     questions = @{
         resource = @{
@@ -43,7 +43,7 @@ $inputJson = @{
             criteria = $agents
         }
         model_reasoning = @{
-            instructions = 'Select the cheapest model/effort pair adequate for state.assignment and state.requirements. Prefer lower existing manual cost ratings among adequate choices; justify higher cost by needed capability. Ratings describe models, not measured prices or effort-level cost. Unknown ratings stay unknown; do not invent ratings or thresholds.'
+            instructions = 'For state.assignment and state.requirements, first select the lowest-cost adequate model, preferring lower existing manual cost ratings among adequate models. Then select the lowest adequate reasoning effort within that model from its supported efforts. Escalate to a more capable or expensive model, or higher effort, only when the task requires it. Ratings describe models, not measured prices or effort-level cost. Unknown ratings stay unknown; do not invent ratings or thresholds.'
             criteria = $pairs
         }
     }
@@ -63,8 +63,8 @@ $skills = @{}
 foreach ($skill in $catalog.skills) { $skills[$skill.name] = $skill.description }
 $inputJson = @{
     state = @{
-        assignment = 'Choose a workflow support skill'
-        requirements = 'Execute a Foreman-selected assignment through native Herdr.'
+        assignment = $assignment
+        requirements = $requirements
     }
     questions = @{
         resource = @{
