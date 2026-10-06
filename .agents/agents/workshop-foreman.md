@@ -74,7 +74,7 @@ invokes or launches roles and skills and consumes results.
 ## Incident Recording and Triage
 
 Follow PRD.md's incident policy. The narrow direct-write exception permits
-immediate append/update of the private canonical `local/incident-report.md`
+immediate append/update of the private canonical `.local/incident-report.md`
 at the explicit known main Workshop checkout/session root, without an
 investigation or implementation/review/publication cycle per entry. Briefly
 notify the user. In worker assignments, request observed events through
